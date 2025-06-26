@@ -9,6 +9,7 @@ const generateToken = (id) => {
 };
 
 const signup = async (req, res) => {
+  console.log("Signing Up");
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
