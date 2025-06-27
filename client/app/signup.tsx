@@ -69,7 +69,7 @@ export default function SignupScreen({ onNavigateToLogin, onSignup }: SignupScre
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.iconContainer}>
-                <Ionicons name="fitness" size={40} color="#4A90E2" />
+                <Ionicons name="fitness" size={40} color="#288afa" />
               </View>
               <Text style={styles.title}>Create Account</Text>
               <Text style={styles.subtitle}>Start your fitness journey today</Text>
@@ -275,8 +275,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#4A90E2",
-    borderColor: "#4A90E2",
+    backgroundColor: "#288afa",
+    borderColor: "#288afa",
   },
   termsText: {
     flex: 1,
@@ -285,16 +285,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   termsLink: {
-    color: "#4A90E2",
+    color: "#288afa",
     fontWeight: "500",
   },
   signupButton: {
-    backgroundColor: "#4A90E2",
+    backgroundColor: "#288afa",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 24,
-    shadowColor: "#4A90E2",
+    shadowColor: "#288afa",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   loginLink: {
-    color: "#4A90E2",
+    color: "#288afa",
     fontWeight: "600",
   },
 })

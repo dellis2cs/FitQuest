@@ -18,7 +18,10 @@ export default function AuthProvider({children}: {children: React.ReactNode}){
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        AsyncStorage.getItem('userToken').then(stored => setToken(stored)).finally(() => setLoading(false));
+        AsyncStorage.getItem('userToken').then(stored => {
+            console.log('🔁 rehydrated token:', stored);
+            setToken(stored)
+        }).finally(() => setLoading(false));
     }, []);
 
     const signIn = async (tok: string) => {

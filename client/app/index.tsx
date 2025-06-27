@@ -1,8 +1,9 @@
 "use client"
 import { useRouter } from 'expo-router';
 import { useState, useContext } from "react"
-import { View, Alert } from "react-native"
+import { View, Alert,TouchableOpacity, Text,StyleSheet  } from "react-native"
 import { AuthContext } from "./context/authContext"
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LoginScreen from "./login"
 import SignupScreen from "./signup"
@@ -63,7 +64,6 @@ export default function App() {
       if(!response.ok) {
         throw new Error(data.message)
       }
-      await AsyncStorage.setItem("userToken", data.token)
       Alert.alert("Success", "Account created successfully!")
       setCurrentScreen("login")
     } catch (err:any) {
@@ -73,12 +73,63 @@ export default function App() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {currentScreen === "login" ? (
-        <LoginScreen onNavigateToSignup={() => setCurrentScreen("signup")} onLogin={handleLogin} />
-      ) : (
-        <SignupScreen onNavigateToLogin={() => setCurrentScreen("login")} onSignup={handleSignup} />
-      )}
-    </View>
-  )
-}
+    <SafeAreaView style={styles.container}>
+      {/* ——— Top segmented control ——— */}
+      <View style={styles.tabRow}>
+        {(["login","signup"] as const).map(tab => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              styles.tab,
+              currentScreen === tab && styles.activeTab
+            ]}
+            onPress={() => setCurrentScreen(tab)}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                currentScreen === tab && styles.activeTabText
+              ]}
+            >
+              {tab === "login" ? "Log in" : "Sign up"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        </View>
+
+        {/* ——— Render the right form ——— */}
+        {currentScreen === "login"
+          ? <LoginScreen onNavigateToSignup={() => setCurrentScreen("signup")} onLogin={handleLogin} />
+          : <SignupScreen onNavigateToLogin={() => setCurrentScreen("login")} onSignup={handleSignup} />
+        }
+      </SafeAreaView>
+    );
+  }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+  tabRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  activeTab: {
+    borderBottomColor: "#288afa",  // your brand color
+    borderBottomWidth: 2,
+  },
+  tabText: {
+    color: "#888",
+    fontSize: 16,
+  },
+  activeTabText: {
+    color: "#288afa",
+    fontWeight: "600",
+  },
+});
+// <LoginScreen onNavigateToSignup={() => setCurrentScreen("signup")} onLogin={handleLogin} />
+// <SignupScreen onNavigateToLogin={() => setCurrentScreen("login")} onSignup={handleSignup} />

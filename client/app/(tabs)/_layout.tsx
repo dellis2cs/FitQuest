@@ -5,13 +5,41 @@ export default function TabsLayout(){
     return (
         <Tabs>
             <Tabs.Screen
-                name="dashboard"
-                options={{
-                title: 'Home',
-                tabBarIcon: ({ color, size }: any) =>
-                    <Ionicons name="home" size={size} color={color} />,
-                }}
-            />
+        name="workouts"
+        options={{
+          title: "Workouts",
+          headerShown: false,
+          tabBarIcon: ({ color, size }) =>
+            <Ionicons name="barbell" size={size} color={color} />,
+        }}
+      />
+        <Tabs.Screen
+            name="guilds"
+            options={{
+            title: "Guilds",
+            headerShown: false,
+            tabBarIcon: ({ color, size }) =>
+                <Ionicons name="people" size={size} color={color} />,
+            }}
+        />
+        <Tabs.Screen
+            name="friends"
+            options={{
+            title: "Friends",
+            headerShown: false,
+            tabBarIcon: ({ color, size }) =>
+                <Ionicons name="people-circle" size={size} color={color} />,
+            }}
+        />
+        <Tabs.Screen
+            name="profile"
+            options={{
+            title: "Profile",
+            headerShown: false,
+            tabBarIcon: ({ color, size }) =>
+                <Ionicons name="person" size={size} color={color} />,
+            }}
+        />
             {/* add more tabs here as needed */}
         </Tabs>
     )

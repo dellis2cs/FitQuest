@@ -48,7 +48,7 @@ export default function LoginScreen({ onNavigateToSignup, onLogin }: LoginScreen
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Ionicons name="fitness" size={40} color="#4A90E2" />
+              <Ionicons name="fitness" size={40} color="#288afa" />
             </View>
             <Text style={styles.title}>FitQuest</Text>
             <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
@@ -204,16 +204,16 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: "#4A90E2",
+    color: "#288afa",
     fontWeight: "500",
   },
   loginButton: {
-    backgroundColor: "#4A90E2",
+    backgroundColor: "#288afa",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 24,
-    shadowColor: "#4A90E2",
+    shadowColor: "#288afa",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   signupLink: {
-    color: "#4A90E2",
+    color: "#288afa",
     fontWeight: "600",
   },
 })
