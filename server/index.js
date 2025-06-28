@@ -4,11 +4,13 @@ const dotenv = require("dotenv").config();
 const cors = require("cors");
 // const testRouter = require("./routes/testRoute");
 const authRouter = require("./routes/authRoute");
+const profileRouter = require("./routes/profileRoute");
 
 app.use(cors());
 app.use(express.json());
 
 app.use(authRouter);
+app.use(profileRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello from Node API Server Updated");

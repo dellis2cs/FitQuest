@@ -1,5 +1,5 @@
-import React from 'react';
-import { useState, useContext } from 'react';
+// app/(tabs)/profile.tsx
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,24 +9,32 @@ import {
   Image,
   TouchableOpacity,
   Pressable,
-  Modal
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-
 import { AuthContext } from '../context/authContext';
 
-interface StatCardProps {
+interface Stat {
   title: string;
   level: number;
   xp: number;
   maxXp: number;
   icon: string;
 }
+interface UserData {
+  username: string;
+  total_xp: number;
+  current_level: number;
+  stats: Stat[];
+  bench1rm: number;
+  squat1rm: number;
+  deadlift1rm: number;
+  avatar_url: string;
+}
 
-const StatCard: React.FC<StatCardProps> = ({ title, level, xp, maxXp, icon }) => {
-  const progress = (xp / maxXp) * 100;
-
-  
+const StatCard: React.FC<Stat> = ({ title, level, xp, maxXp, icon }) => {
+  const progress = Math.min((xp / maxXp) * 100, 100);
   return (
     <View style={styles.statCard}>
       <View style={styles.statHeader}>
@@ -49,73 +57,81 @@ const StatCard: React.FC<StatCardProps> = ({ title, level, xp, maxXp, icon }) =>
   );
 };
 
-const ProfileScreen: React.FC = () => {
-  // Mock data - replace with actual user data
-  const userData = {
-    username: "Alex Johnson",
-    totalXp: 2450,
-    currentLevel: 12,
-    strength: { level: 8, xp: 1250, maxXp: 1600 },
-    speed: { level: 6, xp: 890, maxXp: 1200 },
-    stamina: { level: 10, xp: 1800, maxXp: 2000 },
-    flexibility: { level: 4, xp: 320, maxXp: 800 },
-    benchPr: 185,
-    squatPr: 225,
-    deadliftPr: 275,
-  };
+export default function ProfileScreen() {
+  const { signOut, token } = useContext(AuthContext);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const router = useRouter();
 
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch('http://localhost:8000/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        console.log(data)
+        setUserData(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProfile();
+  }, [token]);
+
+  if (loading || !userData) {
+    return <ActivityIndicator style={{ flex: 1 }} />;
+  }
+
+  const { username, total_xp, current_level, bench1rm, squat1rm, deadlift1rm, avatar_url } = userData;
+
+  const stats: Stat[] = [
+    { title: 'Strength', level: current_level, xp: total_xp * 0.25, maxXp: total_xp, icon: '💪' },
+    { title: 'Speed', level: current_level, xp: total_xp * 0.25, maxXp: total_xp, icon: '⚡' },
+    { title: 'Stamina', level: current_level, xp: total_xp * 0.25, maxXp: total_xp, icon: '🫁' },
+    { title: 'Flexibility', level: current_level, xp: total_xp * 0.25, maxXp: total_xp, icon: '🤸' },
+  ];
+  
   const calculateLevelProgress = () => {
     const baseXp = 100;
     const growthRate = 1.5;
-    const nextLevelXp = baseXp * Math.pow(growthRate, userData.currentLevel);
-    const currentLevelXp = baseXp * Math.pow(growthRate, userData.currentLevel - 1);
-    const progress = ((userData.totalXp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
-    return Math.min(progress, 100);
+    const nextXp = baseXp * Math.pow(growthRate, current_level);
+    const prevXp = baseXp * Math.pow(growthRate, current_level - 1);
+    const progress = ((total_xp - prevXp) / (nextXp - prevXp)) * 100;
+    return Math.min(Math.max(progress, 0), 100);
   };
-
-  const { signOut } = useContext(AuthContext);
-  const [modalVisible, setModalVisible] = useState(false);
-   const router = useRouter();
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        
-        {/* Header with Settings button */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
             <Text style={styles.headerButtonText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => setModalVisible(true)}  // ← open modal
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={() => setModalVisible(true)}>
             <Text style={styles.headerButtonText}>⚙️</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Profile Card */}
         <View style={styles.profileSection}>
           <View style={styles.profileCard}>
             <View style={styles.profileContent}>
               <View style={styles.avatarContainer}>
-                <Image
-                  source={{ uri: 'https://placeholder.pics/svg/100x100/DEDEDE/555555/Avatar' }}
-                  style={styles.avatar}
-                />
+                <Image source={{ uri: avatar_url }} style={styles.avatar} />
                 <View style={styles.levelBadge}>
-                  <Text style={styles.levelBadgeText}>{userData.currentLevel}</Text>
+                  <Text style={styles.levelBadgeText}>{current_level}</Text>
                 </View>
               </View>
-              
-              <Text style={styles.username}>{userData.username}</Text>
-              <Text style={styles.totalXp}>{userData.totalXp.toLocaleString()} Total XP</Text>
-              
+              <Text style={styles.username}>{username}</Text>
+              <Text style={styles.total_xp}>{total_xp.toLocaleString()} Total XP</Text>
               <View style={styles.levelProgressSection}>
                 <View style={styles.levelProgressLabels}>
-                  <Text style={styles.levelProgressLabel}>Level {userData.currentLevel}</Text>
-                  <Text style={styles.levelProgressLabel}>Level {userData.currentLevel + 1}</Text>
+                  <Text style={styles.levelProgressLabel}>Level {current_level}</Text>
+                  <Text style={styles.levelProgressLabel}>Level {current_level + 1}</Text>
                 </View>
                 <View style={styles.levelProgressContainer}>
                   <View style={[styles.levelProgressFill, { width: `${calculateLevelProgress()}%` }]} />
@@ -125,88 +141,46 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Stats Section */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Your Stats</Text>
-          <StatCard
-            title="Strength"
-            level={userData.strength.level}
-            xp={userData.strength.xp}
-            maxXp={userData.strength.maxXp}
-            icon="💪"
-          />
-          <StatCard
-            title="Speed"
-            level={userData.speed.level}
-            xp={userData.speed.xp}
-            maxXp={userData.speed.maxXp}
-            icon="⚡"
-          />
-          <StatCard
-            title="Stamina"
-            level={userData.stamina.level}
-            xp={userData.stamina.xp}
-            maxXp={userData.stamina.maxXp}
-            icon="🫁"
-          />
-          <StatCard
-            title="Flexibility"
-            level={userData.flexibility.level}
-            xp={userData.flexibility.xp}
-            maxXp={userData.flexibility.maxXp}
-            icon="🤸"
-          />
+          {stats.map(stat => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
         </View>
 
-        {/* Personal Records */}
         <View style={styles.prSection}>
           <Text style={styles.sectionTitle}>Personal Records</Text>
           <View style={styles.prCard}>
             <View style={styles.prGrid}>
-              <View style={styles.prItem}>
-                <Text style={styles.prLabel}>Bench</Text>
-                <Text style={styles.prValue}>{userData.benchPr}</Text>
-                <Text style={styles.prUnit}>lbs</Text>
-              </View>
-              <View style={styles.prDivider} />
-              <View style={styles.prItem}>
-                <Text style={styles.prLabel}>Squat</Text>
-                <Text style={styles.prValue}>{userData.squatPr}</Text>
-                <Text style={styles.prUnit}>lbs</Text>
-              </View>
-              <View style={styles.prDivider} />
-              <View style={styles.prItem}>
-                <Text style={styles.prLabel}>Deadlift</Text>
-                <Text style={styles.prValue}>{userData.deadliftPr}</Text>
-                <Text style={styles.prUnit}>lbs</Text>
-              </View>
+              {[{ label: 'Bench', value: bench1rm }, { label: 'Squat', value: squat1rm }, { label: 'Deadlift', value: deadlift1rm }].map(pr => (
+                <React.Fragment key={pr.label}>
+                  <View style={styles.prItem}>
+                    <Text style={styles.prLabel}>{pr.label}</Text>
+                    <Text style={styles.prValue}>{pr.value}</Text>
+                    <Text style={styles.prUnit}>lbs</Text>
+                  </View>
+                  {pr.label !== 'Deadlift' && <View style={styles.prDivider} />}
+                </React.Fragment>
+              ))}
             </View>
           </View>
         </View>
       </ScrollView>
-      {/* ——— Sign Out Confirmation Modal ——— */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
+
+      <Modal transparent animationType="fade" visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Sign Out</Text>
             <Text style={styles.modalMessage}>Are you sure you want to sign out?</Text>
             <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
-              >
+              <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalButton, styles.signOutButton]}
                 onPress={async () => {
                   setModalVisible(false);
-                  await signOut();   // clears token → AuthGate will kick user to login
+                  await signOut();
                   router.replace('/');
                 }}
               >
@@ -218,7 +192,8 @@ const ProfileScreen: React.FC = () => {
       </Modal>
     </SafeAreaView>
   );
-};
+}
+
 
 const styles = StyleSheet.create({
   container: {
@@ -309,7 +284,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 8,
   },
-  totalXp: {
+  total_xp: {
     fontSize: 16,
     color: '#6b7280',
     marginBottom: 24,
@@ -514,4 +489,3 @@ const styles = StyleSheet.create({
 });
 
 
-export default ProfileScreen;
