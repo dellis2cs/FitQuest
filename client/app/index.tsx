@@ -12,7 +12,7 @@ type Screen = "login" | "signup"
 
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("signup")
+  const [currentScreen, setCurrentScreen] = useState<Screen>("login")
   const { signIn } = useContext(AuthContext);
   const router = useRouter();
 
@@ -39,7 +39,7 @@ export default function App() {
     // await AsyncStorage.setItem("userToken", data.token);
 
     // send them into the authenticated tab flow
-    router.replace("/dashboard");
+    router.replace("/profile");
     
     } catch (err: any) {
       console.log("Login error:", err);
