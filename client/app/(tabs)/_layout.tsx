@@ -3,7 +3,20 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function TabsLayout(){
     return (
-        <Tabs>
+        <Tabs
+      screenOptions={{
+        headerShown: false,        // no top header
+        tabBarShowLabel: false,    // hide all labels
+        tabBarActiveTintColor: '#485c11',   // your primary purple
+        tabBarInactiveTintColor: '#A8AAA2',     // muted gray
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 0,       // remove border
+          elevation: 0,            // remove Android shadow
+          height: 70,              // adjust bar height
+        },
+      }}
+    >
             <Tabs.Screen
         name="workouts"
         options={{
