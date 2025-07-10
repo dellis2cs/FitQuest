@@ -14,18 +14,14 @@ import { useRouter } from 'expo-router';
 import { AuthContext } from '../context/authContext';
 
 // match whatever your backend returns
-export interface Workout {
+export interface Session {
   id: string;
-  movement: string;
-  weight: number;
-  reps: number;
-  duration_seconds?: number;
-  stat_category: string;
-  xp_awarded: number;
   performed_at: string;
+  movement_count: number;
+  total_xp: number;
 }
 
-const WorkoutCard: React.FC<{ workout: Workout }> = ({ workout }) => {
+const SessionCard: React.FC<{ session: Session }> = ({ session }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -36,43 +32,30 @@ const WorkoutCard: React.FC<{ workout: Workout }> = ({ workout }) => {
     });
   };
 
-  const isDuration = workout.stat_category === 'Stamina' && workout.duration_seconds != null;
 
   return (
-    <View style={styles.workoutCard}>
+    <View style={styles.SessionCard}>
       <View style={styles.workoutHeader}>
         <View style={styles.workoutInfo}>
-          <Text style={styles.workoutMovement}>{workout.movement}</Text>
-          <Text style={styles.workoutDate}>{formatDate(workout.performed_at)}</Text>
-        </View>
-        <View style={styles.statBadge}>
-          <Text style={styles.statBadgeText}>{workout.stat_category}</Text>
+          <Text style={styles.workoutMovement}>{formatDate(session.performed_at)}</Text>
+
         </View>
       </View>
       
       <View style={styles.workoutStats}>
-        {isDuration ? (
-          <View style={styles.workoutStat}>
-            <Text style={styles.workoutStatLabel}>Duration</Text>
-            <Text style={styles.workoutStatValue}>{workout.duration_seconds} sec</Text>
-          </View>
-        ) : (
+        
           <>
             <View style={styles.workoutStat}>
-              <Text style={styles.workoutStatLabel}>Weight</Text>
-              <Text style={styles.workoutStatValue}>{workout.weight} lbs</Text>
+              <Text style={styles.workoutStatLabel}>Movments</Text>
+              <Text style={styles.workoutStatValue}>{session.movement_count}</Text>
             </View>
             <View style={styles.workoutStatDivider} />
-            <View style={styles.workoutStat}>
-              <Text style={styles.workoutStatLabel}>Reps</Text>
-              <Text style={styles.workoutStatValue}>{workout.reps}</Text>
-            </View>
+            
           </>
-        )}
-        <View style={styles.workoutStatDivider} />
+
         <View style={styles.workoutStat}>
           <Text style={styles.workoutStatLabel}>XP</Text>
-          <Text style={styles.workoutStatXp}>+{Math.floor(workout.xp_awarded)}</Text>
+          <Text style={styles.workoutStatXp}>+{Math.floor(session.total_xp)}</Text>
         </View>
       </View>
     </View>
@@ -88,10 +71,10 @@ export default function WorkoutScreen() {
     isLoading,
     error,
     refetch,
-  } = useQuery<Workout[], Error>({
+  } = useQuery<Session[], Error>({
     queryKey: ['workouts'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:8000/workouts', {
+      const res = await fetch('http://localhost:8000/sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -155,7 +138,13 @@ export default function WorkoutScreen() {
           <FlatList
             data={workouts}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <WorkoutCard workout={item} />}
+            renderItem={({ item: session }) => (
+  <TouchableOpacity
+    onPress={() => router.push(`/sessions/${session.id}`)}
+  >
+    <SessionCard session={session} />
+  </TouchableOpacity>
+)}
             scrollEnabled={false}
             showsVerticalScrollIndicator={false}
           />
@@ -229,7 +218,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '400',
   },
-  workoutCard: {
+  SessionCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 28,
