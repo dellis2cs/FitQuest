@@ -14,23 +14,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AuthContext } from './context/authContext'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-// Optional: mirror your calcStatXP server logic if you want to compute XP client-side
-function calcStatXP(
-  reps: number | null,
-  weight: number | null,
-  oneRepMax = 1,
-  K = 10
-) {
-  if (!reps || !weight) return 0
-  const intensity = Math.min(weight / oneRepMax, 1)
-  return reps * intensity * K
-}
+
 
 type MovementLine = {
   movement: string
   weight: string
-  reps: string
-  statCategory: 'Strength' | 'Speed' | 'Stamina' | 'Flexibility'
+  reps: string         // for weights: reps, for cardio: duration
+  type: 'Weights' | 'Stamina' | ''
 }
 
 export default function AddWorkout() {
@@ -38,9 +28,9 @@ export default function AddWorkout() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // form state
+  // one or more movement lines
   const [lines, setLines] = useState<MovementLine[]>([
-    { movement: '', weight: '', reps: '', statCategory: 'Strength' },
+    { movement: '', weight: '', reps: '', type: '' },
   ])
 
   // mutation to create session + movements
@@ -53,11 +43,11 @@ export default function AddWorkout() {
           const r = l.reps ? parseInt(l.reps, 10) : null
           return {
             movement: l.movement,
-            weight: w,
-            reps: r,
-            duration_seconds: l.statCategory === 'Stamina' ? r : null,
-            stat_category: l.statCategory,
-            xp_awarded: calcStatXP(r, w),
+            weight: l.type === 'Weights' ? w : null,
+            reps: l.type === 'Weights' ? r : null,
+            duration_seconds: l.type === 'Stamina' ? r : null,
+            stat_category: l.type === 'Weights' ? 'Strength' : 'Stamina',
+            
           }
         }),
       }
@@ -88,9 +78,13 @@ export default function AddWorkout() {
   })
 
   const handleSave = () => {
-    for (const line of lines) {
+    // validate each line
+    for (const [i, line] of lines.entries()) {
+      if (!line.type) {
+        return Alert.alert(`Select type for movement ${i + 1}`)
+      }
       if (!line.movement.trim()) {
-        return Alert.alert('Please enter a movement name')
+        return Alert.alert(`Enter name for movement ${i + 1}`)
       }
     }
     mutation.mutate()
@@ -98,7 +92,7 @@ export default function AddWorkout() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with back button */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>←</Text>
@@ -107,16 +101,8 @@ export default function AddWorkout() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Add Movements</Text>
-          <Text style={styles.sectionSubtitle}>
-            Record your exercises with weights, reps, or duration
-          </Text>
-
           {lines.map((line, i) => (
             <View key={i} style={styles.movementCard}>
               <View style={styles.movementHeader}>
@@ -131,47 +117,65 @@ export default function AddWorkout() {
                 )}
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Exercise Name</Text>
-                <TextInput
-                  placeholder="e.g., Bench Press, Squats"
-                  style={styles.input}
-                  value={line.movement}
-                  placeholderTextColor="#94a3b8"
-                  onChangeText={t => {
-                    const copy = [...lines]
-                    copy[i].movement = t
-                    setLines(copy)
-                  }}
-                />
+              {/* Per-line toggle */}
+              <View style={styles.toggleGroup}>
+                {(['Weights','Stamina'] as const).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => {
+                      const copy = [...lines]
+                      copy[i].type = t
+                      setLines(copy)
+                    }}
+                    style={[
+                      styles.toggleBtn,
+                      line.type === t && styles.toggleBtnActive
+                    ]}
+                  >
+                    <Text style={[
+                      styles.toggleText,
+                      line.type === t && styles.toggleTextActive
+                    ]}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
 
-              {line.statCategory === 'Stamina' ? (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Duration</Text>
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                placeholder="Movement name"
+                style={styles.input}
+                value={line.movement}
+                onChangeText={t => {
+                  const copy = [...lines]
+                  copy[i].movement = t
+                  setLines(copy)
+                }}
+              />
+
+              {line.type === 'Stamina' ? (
+                <>
+                  <Text style={styles.inputLabel}>Duration (sec)</Text>
                   <TextInput
-                    placeholder="Duration in seconds"
+                    placeholder="e.g. 60"
                     style={styles.input}
                     keyboardType="numeric"
                     value={line.reps}
-                    placeholderTextColor="#94a3b8"
                     onChangeText={t => {
                       const copy = [...lines]
                       copy[i].reps = t
                       setLines(copy)
                     }}
                   />
-                </View>
+                </>
               ) : (
                 <View style={styles.inputRow}>
-                  <View style={[styles.inputGroup, styles.inputHalf]}>
-                    <Text style={styles.inputLabel}>Weight</Text>
+                  <View style={styles.inputHalf}>
+                    <Text style={styles.inputLabel}>Weight (lbs)</Text>
                     <TextInput
-                      placeholder="lbs"
+                      placeholder="e.g. 135"
                       style={styles.input}
                       keyboardType="numeric"
                       value={line.weight}
-                      placeholderTextColor="#94a3b8"
                       onChangeText={t => {
                         const copy = [...lines]
                         copy[i].weight = t
@@ -179,14 +183,13 @@ export default function AddWorkout() {
                       }}
                     />
                   </View>
-                  <View style={[styles.inputGroup, styles.inputHalf]}>
+                  <View style={styles.inputHalf}>
                     <Text style={styles.inputLabel}>Reps</Text>
                     <TextInput
-                      placeholder="reps"
+                      placeholder="e.g. 8"
                       style={styles.input}
                       keyboardType="numeric"
                       value={line.reps}
-                      placeholderTextColor="#94a3b8"
                       onChangeText={t => {
                         const copy = [...lines]
                         copy[i].reps = t
@@ -200,29 +203,19 @@ export default function AddWorkout() {
           ))}
 
           <TouchableOpacity
-            onPress={() =>
-              setLines([
-                ...lines,
-                { movement: '', weight: '', reps: '', statCategory: 'Strength' },
-              ])
-            }
+            onPress={() => setLines([...lines, { movement: '', weight: '', reps: '', type: '' }])}
             style={styles.addBtn}
           >
-            <Text style={styles.addText}>+ Add Another Movement</Text>
+            <Text style={styles.addText}>+ Add Movement</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.actionSection}>
           <TouchableOpacity
             onPress={handleSave}
             disabled={mutation.isLoading}
-            style={[
-              styles.saveBtn,
-              mutation.isLoading && styles.saveBtnDisabled,
-            ]}
+            style={[styles.saveBtn, mutation.isLoading && styles.saveBtnDisabled]}
           >
             <Text style={styles.saveText}>
-              {mutation.isLoading ? 'Saving Workout...' : 'Save Workout'}
+              {mutation.isLoading ? 'Saving…' : 'Save Workout'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -232,170 +225,31 @@ export default function AddWorkout() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 32,
-    paddingTop: 20,
-    paddingBottom: 32,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  backText: {
-    fontSize: 20,
-    color: '#1a1a1a',
-    fontWeight: '400',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#1a1a1a',
-    letterSpacing: -0.5,
-  },
-  headerSpacer: {
-    width: 44,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  formSection: {
-    paddingHorizontal: 32,
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '400',
-    color: '#1a1a1a',
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    marginBottom: 32,
-    lineHeight: 24,
-    fontWeight: '400',
-  },
-  movementCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  movementHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  movementNumber: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  removeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-  },
-  removeText: {
-    color: '#dc2626',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  inputHalf: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-    letterSpacing: -0.1,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1a1a1a',
-    backgroundColor: '#ffffff',
-    fontWeight: '400',
-  },
-  addBtn: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 20,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  addText: {
-    color: '#64748b',
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: -0.1,
-  },
-  actionSection: {
-    paddingHorizontal: 32,
-  },
-  saveBtn: {
-    backgroundColor: '#1a1a1a',
-    paddingVertical: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  saveBtnDisabled: {
-    opacity: 0.6,
-  },
-  saveText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: -0.1,
-  },
+  container: { flex: 1, backgroundColor: '#fafafa' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', elevation: 3 },
+  backText: { fontSize: 20 },
+  headerTitle: { fontSize: 24, fontWeight: '500' },
+  headerSpacer: { width: 44 },
+  scrollContent: { padding: 24 },
+  formSection: {},
+  toggleGroup: { flexDirection: 'row', justifyContent: 'center', marginBottom: 16 },
+  toggleBtn: { flex: 1, padding: 10, borderWidth: 1, borderColor: '#e2e8f0', marginHorizontal: 4, borderRadius: 8, alignItems: 'center' },
+  toggleBtnActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
+  toggleText: { color: '#64748b' },
+  toggleTextActive: { color: '#fff' },
+  movementCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, elevation: 2 },
+  movementHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  movementNumber: { fontSize: 14, fontWeight: '500' },
+  removeBtn: {},
+  removeText: { color: '#dc2626' },
+  inputLabel: { fontSize: 14, marginBottom: 4 },
+  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 10, marginBottom: 12 },
+  inputRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  inputHalf: { flex: 1 },
+  addBtn: { padding: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: '#e2e8f0', borderRadius: 8, alignItems: 'center', marginBottom: 20 },
+  addText: { color: '#64748b' },
+  saveBtn: { backgroundColor: '#1a1a1a', padding: 16, borderRadius: 8, alignItems: 'center' },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveText: { color: '#fff', fontWeight: '500' },
 })

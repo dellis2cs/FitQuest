@@ -11,7 +11,7 @@ import {
 } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { AuthContext } from '../../context/authContext'
+import { AuthContext } from '../context/authContext'
 
 // match your backend's getSessionDetail response
 interface Movement {

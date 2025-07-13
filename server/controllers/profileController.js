@@ -90,7 +90,7 @@ const getProfile = async (req, res) => {
     });
 
     // 3️⃣ Return the raw row; your front-end can camelCase or map as needed
-    console.log("Profile fetched successfully:", data);
+    // console.log("Profile fetched successfully:", data);
     return res.status(200).json({
       id: raw.id,
       username: raw.username,
@@ -109,4 +109,4 @@ const getProfile = async (req, res) => {
   }
 };
 
-module.exports = { getProfile };
+module.exports = { getProfile, xpForLevel };

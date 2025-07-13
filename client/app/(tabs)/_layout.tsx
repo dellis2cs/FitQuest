@@ -53,7 +53,6 @@ export default function TabsLayout(){
                 <Ionicons name="person" size={size} color={color} />,
             }}
         />
-            {/* add more tabs here as needed */}
         </Tabs>
     )
 }
