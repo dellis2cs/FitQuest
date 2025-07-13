@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   View,
   Text,
@@ -69,11 +69,12 @@ const StatCard: React.FC<{ stat: Stat }> = ({ stat }) => {
 
 export default function ProfileScreen() {
   const { signOut, token } = useContext(AuthContext);
+  const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const router = useRouter();
 
   const { data: userData, isLoading, error } = useQuery<UserData, Error>({
-    queryKey: ['profile'],
+    queryKey: ['profile', token],
     queryFn: async () => {
       const res = await fetch('http://localhost:8000/profile', {
         headers: { Authorization: `Bearer ${token}` },
@@ -87,6 +88,7 @@ export default function ProfileScreen() {
     },
     staleTime: 5 * 60_000,
     retry: false,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 
@@ -209,6 +211,7 @@ export default function ProfileScreen() {
                 style={[styles.modalButton, styles.signOutButton]}
                 onPress={async () => {
                   setModalVisible(false);
+                  queryClient.removeQueries(); 
                   await signOut();
                   router.replace('/');
                 }}

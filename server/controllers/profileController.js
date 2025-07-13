@@ -109,4 +109,28 @@ const getProfile = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, xpForLevel };
+const setMaxes = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { bench_1rm, squat_1rm, deadlift_1rm } = req.body;
+    console.log("Received maxes:", { bench_1rm, squat_1rm, deadlift_1rm });
+    if (
+      ![bench_1rm, squat_1rm, deadlift_1rm].every((n) => typeof n === "number")
+    ) {
+      return res
+        .status(400)
+        .json({ message: "bench, squat, deadlift must be numbers" });
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ bench_1rm, squat_1rm, deadlift_1rm })
+      .eq("id", userId);
+    if (error) throw error;
+    return res.status(200).json({ message: "Maxes saved" });
+  } catch (err) {
+    console.error("Error in setMaxes:", err);
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+module.exports = { getProfile, xpForLevel, setMaxes };

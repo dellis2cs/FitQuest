@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import {
   View,
@@ -63,81 +62,118 @@ export default function SignupScreen({ onNavigateToLogin, onSignup }: SignupScre
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.iconContainer}>
-                <Ionicons name="fitness" size={40} color="#288afa" />
+                <Ionicons name="fitness" size={32} color="#1a1a1a" />
               </View>
               <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Start your fitness journey today</Text>
+              <Text style={styles.subtitle}>
+                Start your fitness journey today
+              </Text>
             </View>
 
             {/* Form */}
             <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="User"
-                  placeholderTextColor="#8E8E93"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Username</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="person-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your username"
+                    placeholderTextColor="#94a3b8"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                  />
+                </View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  placeholderTextColor="#8E8E93"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="mail-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#94a3b8"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="#8E8E93"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                  <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#8E8E93" />
-                </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Create a password"
+                    placeholderTextColor="#94a3b8"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)} 
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons 
+                      name={showPassword ? "eye-outline" : "eye-off-outline"} 
+                      size={20} 
+                      color="#64748b" 
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#8E8E93" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm Password"
-                  placeholderTextColor="#8E8E93"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
-                  <Ionicons name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#8E8E93" />
-                </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirm Password</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#64748b" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm your password"
+                    placeholderTextColor="#94a3b8"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)} 
+                    style={styles.eyeIcon}
+                  >
+                    <Ionicons 
+                      name={showConfirmPassword ? "eye-outline" : "eye-off-outline"} 
+                      size={20} 
+                      color="#64748b" 
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              <TouchableOpacity style={styles.termsContainer} onPress={() => setAgreeToTerms(!agreeToTerms)}>
+              <TouchableOpacity 
+                style={styles.termsContainer} 
+                onPress={() => setAgreeToTerms(!agreeToTerms)}
+              >
                 <View style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}>
-                  {agreeToTerms && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                  {agreeToTerms && <Ionicons name="checkmark" size={14} color="#ffffff" />}
                 </View>
                 <Text style={styles.termsText}>
                   I agree to the <Text style={styles.termsLink}>Terms and Conditions</Text> and{" "}
@@ -150,24 +186,28 @@ export default function SignupScreen({ onNavigateToLogin, onSignup }: SignupScre
                 onPress={handleSignup}
                 disabled={loading}
               >
-                <Text style={styles.signupButtonText}>{loading ? "Creating Account..." : "Create Account"}</Text>
+                <Text style={styles.signupButtonText}>
+                  {loading ? "Creating account..." : "Create Account"}
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.divider}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
+                <Text style={styles.dividerText}>or continue with</Text>
                 <View style={styles.dividerLine} />
               </View>
 
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
+              <View style={styles.socialButtons}>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Ionicons name="logo-google" size={20} color="#4285F4" />
+                  <Text style={styles.socialButtonText}>Google</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-apple" size={20} color="#000" />
-                <Text style={styles.socialButtonText}>Continue with Apple</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.socialButton}>
+                  <Ionicons name="logo-apple" size={20} color="#1a1a1a" />
+                  <Text style={styles.socialButtonText}>Apple</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Footer */}
@@ -175,7 +215,7 @@ export default function SignupScreen({ onNavigateToLogin, onSignup }: SignupScre
               <Text style={styles.footerText}>
                 Already have an account?{" "}
                 <Text style={styles.loginLink} onPress={onNavigateToLogin}>
-                  Sign In
+                  Sign in
                 </Text>
               </Text>
             </View>
@@ -189,7 +229,7 @@ export default function SignupScreen({ onNavigateToLogin, onSignup }: SignupScre
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fafafa",
   },
   keyboardView: {
     flex: 1,
@@ -199,52 +239,63 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 40,
   },
   header: {
     alignItems: "center",
     marginBottom: 40,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#E3F2FD",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1A1A1A",
+    fontSize: 32,
+    fontWeight: "300",
+    color: "#1a1a1a",
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: "#8E8E93",
+    color: "#64748b",
     textAlign: "center",
+    fontWeight: "400",
+    lineHeight: 24,
   },
   form: {
-    marginBottom: 40,
+    marginBottom: 32,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom: 8,
+    letterSpacing: -0.1,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   inputIcon: {
     marginRight: 12,
@@ -252,7 +303,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: "#1A1A1A",
+    color: "#1a1a1a",
+    fontWeight: "400",
   },
   eyeIcon: {
     padding: 4,
@@ -260,7 +312,7 @@ const styles = StyleSheet.create({
   termsContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 24,
+    marginBottom: 32,
     paddingHorizontal: 4,
   },
   checkbox: {
@@ -268,48 +320,48 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: "#E5E5EA",
+    borderColor: "#e5e7eb",
     marginRight: 12,
     marginTop: 2,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#ffffff",
   },
   checkboxChecked: {
-    backgroundColor: "#288afa",
-    borderColor: "#288afa",
+    backgroundColor: "#1a1a1a",
+    borderColor: "#1a1a1a",
   },
   termsText: {
     flex: 1,
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#64748b",
     lineHeight: 20,
+    fontWeight: "400",
   },
   termsLink: {
-    color: "#288afa",
+    color: "#1a1a1a",
     fontWeight: "500",
   },
   signupButton: {
-    backgroundColor: "#288afa",
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    paddingVertical: 18,
     alignItems: "center",
-    marginBottom: 24,
-    shadowColor: "#288afa",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
+    marginBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   signupButtonDisabled: {
     opacity: 0.6,
   },
   signupButtonText: {
-    color: "#FFFFFF",
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
+    letterSpacing: -0.1,
   },
   divider: {
     flexDirection: "row",
@@ -319,45 +371,45 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E5E5EA",
+    backgroundColor: "#e2e8f0",
   },
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#64748b",
+    fontWeight: "400",
+  },
+  socialButtons: {
+    flexDirection: "row",
+    gap: 12,
   },
   socialButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
     paddingVertical: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    gap: 8,
   },
   socialButtonText: {
-    marginLeft: 12,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
-    color: "#1A1A1A",
+    color: "#374151",
   },
   footer: {
     alignItems: "center",
   },
   footerText: {
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#64748b",
+    fontWeight: "400",
   },
   loginLink: {
-    color: "#288afa",
-    fontWeight: "600",
+    color: "#1a1a1a",
+    fontWeight: "500",
   },
 })

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useContext, useEffect } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import * as Font from "expo-font";
 import AppLoading from "expo-app-loading";
 import AuthProvider, { AuthContext } from './context/authContext';
@@ -38,11 +38,17 @@ export default function RootLayout() {
 
 function AuthGate() {
   const { token } = useContext(AuthContext);
+  const pathname = usePathname();
+  const router = useRouter();
 
   // 🚀 as soon as we know we have a token, go to dashboard
   useEffect(() => {
     if (token) {
-      router.replace("/workouts");
+    // if we’re in onboarding, let it finish
+    if (pathname.startsWith('/onboarding')) {
+      return;
+    }
+    router.replace("/workouts");
     }
   }, [token]);
 
@@ -67,6 +73,7 @@ function AuthGate() {
         <>
           <Stack.Screen name="index" />
           <Stack.Screen name="signup" />
+          <Stack.Screen name="onboarding/maxes" />
         </>
       )}
     </Stack>

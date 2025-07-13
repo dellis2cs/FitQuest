@@ -64,8 +64,11 @@ export default function App() {
       if(!response.ok) {
         throw new Error(data.message)
       }
-      Alert.alert("Success", "Account created successfully!")
-      setCurrentScreen("login")
+      const {token} = data;
+      await signIn(token)
+
+      router.replace("/onboarding/maxes")
+
     } catch (err:any) {
       console.log(err)
       Alert.alert("Error", err.message)
