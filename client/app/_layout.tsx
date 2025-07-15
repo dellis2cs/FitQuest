@@ -44,37 +44,13 @@ function AuthGate() {
   // 🚀 as soon as we know we have a token, go to dashboard
   useEffect(() => {
     if (token) {
-      const checkOnboarding = async () => {
-        try {
-          const res = await fetch('http://localhost:8000/profile', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (!res.ok) throw new Error('Profile fetch failed');
-          
-          const profile = await res.json();
-          
-          // Check if any max is missing or zero
-          const needsOnboarding = [
-            'bench_1rm', 
-            'squat_1rm', 
-            'deadlift_1rm'
-          ].some(key => !profile[key] || profile[key] <= 0);
-
-          // Only redirect once when first loading
-          if (!pathname.startsWith('/onboarding') && needsOnboarding) {
-            router.replace('/onboarding/maxes');
-          } else if (pathname === '/onboarding/maxes' && !needsOnboarding) {
-            router.replace('/workouts');
-          }
-        } catch (error) {
-          console.error('Onboarding check failed:', error);
-        }
-      };
-
-      checkOnboarding();
+    // if we’re in onboarding, let it finish
+    if (pathname.startsWith('/onboarding')) {
+      return;
     }
-  }, [token, pathname, router]);
+    router.replace("/workouts");
+    }
+  }, [token]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
