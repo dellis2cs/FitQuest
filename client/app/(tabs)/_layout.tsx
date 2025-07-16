@@ -27,18 +27,18 @@ export default function TabsLayout(){
         }}
       />
         <Tabs.Screen
-            name="guilds"
+            name="friends"
             options={{
-            title: "Guilds",
+            title: "Friends",
             headerShown: false,
             tabBarIcon: ({ color, size }) =>
                 <Ionicons name="people" size={size} color={color} />,
             }}
         />
         <Tabs.Screen
-            name="friends"
+            name="guilds"
             options={{
-            title: "Friends",
+            title: "Guilds",
             headerShown: false,
             tabBarIcon: ({ color, size }) =>
                 <Ionicons name="people-circle" size={size} color={color} />,

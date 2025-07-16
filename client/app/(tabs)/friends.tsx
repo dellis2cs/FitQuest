@@ -1,3 +1,4 @@
+import React, { useState, useContext, useEffect } from 'react'
 import { 
   StyleSheet, 
   Text, 
@@ -8,11 +9,13 @@ import {
   Modal, 
   TextInput, 
   Image,
-  ScrollView 
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native'
-import React, { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AuthContext } from '../context/authContext'
 
-// Mock data types - replace with your actual types
+// Types
 interface Friend {
   id: string
   username: string
@@ -33,39 +36,71 @@ interface SearchResult {
 }
 
 const Friends = () => {
+  const { token } = useContext(AuthContext)
+  const queryClient = useQueryClient()
+
+  // Fetch existing friends
+  const { data: friends = [], isLoading: loadingFriends } = useQuery<Friend[]>({
+    queryKey: ['friends'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:8000/friends', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('Failed to fetch friends')
+      return res.json()
+    }
+  })
+
+  // Search modal state
   const [searchModalVisible, setSearchModalVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
 
-  // Mock friends data - replace with your actual data
-  const [friends] = useState<Friend[]>([
-    {
-      id: '1',
-      username: 'alex_fitness',
-      avatar_url: '/placeholder.svg?height=50&width=50',
-      level: 12,
-      total_xp: 15420,
-      status: 'online'
-    },
-    {
-      id: '2',
-      username: 'sarah_strong',
-      avatar_url: '/placeholder.svg?height=50&width=50',
-      level: 8,
-      total_xp: 9850,
-      status: 'offline',
-      last_active: '2 hours ago'
-    },
-    {
-      id: '3',
-      username: 'mike_muscle',
-      avatar_url: '/placeholder.svg?height=50&width=50',
-      level: 15,
-      total_xp: 22100,
-      status: 'online'
+  // Clear search when modal closes
+  useEffect(() => {
+    if (!searchModalVisible) {
+      setSearchQuery('')
+      setSearchResults([])
     }
-  ])
+  }, [searchModalVisible])
+
+  // Send friend request mutation
+  const sendRequest = useMutation({
+    mutationFn: async (username: string) => {
+      const res = await fetch('http://localhost:8000/friend_requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipient_username: username })
+      })
+      if (!res.ok) throw new Error('Request failed')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['friends'] })
+      queryClient.invalidateQueries({ queryKey: ['userSearch', searchQuery] })
+    }
+  })
+
+  // Perform username search
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return
+    setIsSearching(true)
+    try {
+      const res = await fetch(`http://localhost:8000/search?search=${encodeURIComponent(searchQuery)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      if (!res.ok) throw new Error('Search failed')
+      const data: SearchResult[] = await res.json()
+      setSearchResults(data)
+    } catch {
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }
 
   const FriendCard = ({ friend }: { friend: Friend }) => (
     <View style={styles.friendCard}>
@@ -109,6 +144,7 @@ const Friends = () => {
           result.is_friend && styles.addButtonDisabled
         ]}
         disabled={result.is_friend}
+        onPress={() => sendRequest.mutate(result.username)}
       >
         <Text style={[
           styles.addButtonText,
@@ -150,7 +186,9 @@ const Friends = () => {
 
       {/* Friends List */}
       <View style={styles.content}>
-        {friends.length > 0 ? (
+        {loadingFriends ? (
+          <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+        ) : friends.length > 0 ? (
           <>
             <Text style={styles.sectionTitle}>Your Friends</Text>
             <Text style={styles.sectionSubtitle}>
@@ -158,7 +196,7 @@ const Friends = () => {
             </Text>
             <FlatList
               data={friends}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               renderItem={({ item }) => <FriendCard friend={item} />}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
@@ -200,32 +238,30 @@ const Friends = () => {
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
                 autoCorrect={false}
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
               />
-              <TouchableOpacity style={styles.searchButton}>
-                <Text style={styles.searchButtonText}>Search</Text>
+              <TouchableOpacity 
+                style={styles.searchButton}
+                onPress={handleSearch}
+                disabled={isSearching}
+              >
+                {isSearching
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.searchButtonText}>Search</Text>
+                }
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Search Results */}
           <ScrollView style={styles.searchResults} showsVerticalScrollIndicator={false}>
-            {searchQuery.length > 0 && (
+            {searchResults.length > 0 ? (
               <View style={styles.resultsSection}>
                 <Text style={styles.resultsTitle}>Search Results</Text>
-                {searchResults.length > 0 ? (
-                  searchResults.map((result) => (
-                    <SearchResultCard key={result.id} result={result} />
-                  ))
-                ) : (
-                  <View style={styles.noResults}>
-                    <Text style={styles.noResultsText}>No users found</Text>
-                    <Text style={styles.noResultsSubtext}>
-                      Try searching with a different username
-                    </Text>
-                  </View>
-                )}
+                {searchResults.map(r => <SearchResultCard key={r.id} result={r} />)}
               </View>
-            )}
+            ) : null}
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -236,308 +272,58 @@ const Friends = () => {
 export default Friends
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 20,
-    paddingBottom: 32,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#1a1a1a',
-    letterSpacing: -0.5,
-  },
-  addButton: {
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 32,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '400',
-    color: '#1a1a1a',
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    marginBottom: 24,
-    fontWeight: '400',
-  },
-  listContent: {
-    paddingBottom: 40,
-  },
-  friendCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  friendInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 16,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  statusIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  statusOnline: {
-    backgroundColor: '#10b981',
-  },
-  statusOffline: {
-    backgroundColor: '#94a3b8',
-  },
-  friendDetails: {
-    flex: 1,
-  },
-  friendName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1a1a1a',
-    marginBottom: 2,
-    letterSpacing: -0.1,
-  },
-  friendLevel: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 2,
-    fontWeight: '400',
-  },
-  friendXp: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '400',
-  },
-  friendActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  friendStatus: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '400',
-  },
-  messageButton: {
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  messageButtonText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyStateTitle: {
-    fontSize: 24,
-    fontWeight: '400',
-    color: '#1a1a1a',
-    marginBottom: 12,
-    letterSpacing: -0.3,
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-    fontWeight: '400',
-  },
-  addFirstFriendButton: {
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addFirstFriendText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#fafafa',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 20,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  cancelButton: {
-    paddingVertical: 8,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '400',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#1a1a1a',
-    letterSpacing: -0.2,
-  },
-  headerSpacer: {
-    width: 60,
-  },
-  searchSection: {
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  searchButton: {
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: 'center',
-  },
-  searchButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  searchResults: {
-    flex: 1,
-  },
-  resultsSection: {
-    paddingHorizontal: 32,
-  },
-  resultsTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#1a1a1a',
-    marginBottom: 16,
-    letterSpacing: -0.2,
-  },
-  searchResultCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  searchResultInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  searchAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  searchDetails: {
-    flex: 1,
-  },
-  searchName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1a1a1a',
-    marginBottom: 2,
-    letterSpacing: -0.1,
-  },
-  searchLevel: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '400',
-  },
-  addButtonDisabled: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  addButtonTextDisabled: {
-    color: '#94a3b8',
-  },
-  noResults: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  noResultsText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  noResultsSubtext: {
-    fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#fafafa' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 32, paddingTop: 20, paddingBottom: 32 },
+  headerTitle: { fontSize: 28, fontWeight: '300', color: '#1a1a1a', letterSpacing: -0.5 },
+  addButton: { backgroundColor: '#1a1a1a', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  addButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '500' },
+  content: { flex: 1, paddingHorizontal: 32 },
+  sectionTitle: { fontSize: 24, fontWeight: '400', color: '#1a1a1a', marginBottom: 8, letterSpacing: -0.3 },
+  sectionSubtitle: { fontSize: 16, color: '#64748b', marginBottom: 24, fontWeight: '400' },
+  listContent: { paddingBottom: 40 },
+  friendCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#f1f5f9' },
+  friendInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  avatarContainer: { position: 'relative', marginRight: 16 },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
+  statusIndicator: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#ffffff' },
+  statusOnline: { backgroundColor: '#10b981' },
+  statusOffline: { backgroundColor: '#94a3b8' },
+  friendDetails: { flex: 1 },
+  friendName: { fontSize: 16, fontWeight: '500', color: '#1a1a1a', marginBottom: 2, letterSpacing: -0.1 },
+  friendLevel: { fontSize: 14, color: '#64748b', marginBottom: 2, fontWeight: '400' },
+  friendXp: { fontSize: 12, color: '#94a3b8', fontWeight: '400' },
+  friendActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  friendStatus: { fontSize: 12, color: '#64748b', fontWeight: '400' },
+  messageButton: { backgroundColor: '#f8fafc', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  messageButtonText: { fontSize: 12, color: '#64748b', fontWeight: '500' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
+  emptyStateTitle: { fontSize: 24, fontWeight: '400', color: '#1a1a1a', marginBottom: 12, letterSpacing: -0.3 },
+  emptyStateSubtitle: { font_size: 16, color: '#64748b', textAlign: 'center', lineHeight: 24, marginBottom: 32, fontWeight: '400' },
+  addFirstFriendButton: { backgroundColor: '#1a1a1a', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  addFirstFriendText: { color: '#ffffff', fontSize: 16, fontWeight: '500' },
+  modalContainer: { flex: 1, backgroundColor: '#fafafa' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 32, paddingTop: 20, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  cancelButton: { paddingVertical: 8 },
+  cancelButtonText: { fontSize: 16, color: '#64748b', fontWeight: '400' },
+  modalTitle: { fontSize: 18, fontWeight: '500', color: '#1a1a1a', letterSpacing: -0.2 },
+  headerSpacer: { width: 60 },
+  searchSection: { paddingHorizontal: 32, paddingVertical: 24 },
+  searchContainer: { flexDirection: 'row', gap: 12 },
+  searchInput: { flex: 1, backgroundColor: '#ffffff', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#1a1a1a', borderWidth: 1, borderColor: '#e5e7eb' },
+  searchButton: { backgroundColor: '#1a1a1a', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12, justifyContent: 'center' },
+  searchButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '500' },
+  searchResults: { flex: 1 },
+  resultsSection: { paddingHorizontal: 32 },
+  resultsTitle: { fontSize: 18, fontWeight: '500', color: '#1a1a1a', marginBottom: 16, letterSpacing: -0.2 },
+  searchResultCard: { backgroundColor: '#ffffff', borderRadius: 12, padding: 16, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#f1f5f9' },
+  searchResultInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  searchAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  searchDetails: { flex: 1 },
+  searchName: { fontSize: 16, fontWeight: '500', color: '#1a1a1a', marginBottom: 2, letterSpacing: -0.1 },
+  searchLevel: { fontSize: 14, color: '#64748b', fontWeight: '400' },
+  addButtonDisabled: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0' },
+  addButtonTextDisabled: { color: '#94a3b8' },
+  noResults: { alignItems: 'center', paddingVertical: 40 },
+  noResultsText: { fontSize: 16, fontWeight: '500', color: '#64748b', marginBottom: 8 },
+  noResultsSubtext: { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
 })
