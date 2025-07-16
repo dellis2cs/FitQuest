@@ -34,21 +34,44 @@ interface SearchResult {
   total_xp: number
   is_friend: boolean
 }
+interface PendingRequest {
+  request_id: string
+  requester_id: string
+  requester_username: string
+  requester_avatar: string | null
+  requested_at: string
+}
 
 const Friends = () => {
   const { token } = useContext(AuthContext)
   const queryClient = useQueryClient()
+  const [view, setView] = useState<'friends' | 'requests'>('friends')
 
-  // Fetch existing friends
+  // Base URL (adjust if running on Android emulator)
+  const BASE = 'http://localhost:8000'
+
+  // Fetch accepted friends
   const { data: friends = [], isLoading: loadingFriends } = useQuery<Friend[]>({
     queryKey: ['friends'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:8000/friends', {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`${BASE}/friends`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Failed to fetch friends')
       return res.json()
-    }
+    },
+  })
+
+  // Fetch incoming friend requests
+  const { data: pending = [], isLoading: loadingPending } = useQuery<PendingRequest[]>({
+    queryKey: ['pending'],
+    queryFn: async () => {
+      const res = await fetch(`${BASE}/friend_requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Failed to fetch pending requests')
+      return res.json()
+    },
   })
 
   // Search modal state
@@ -68,7 +91,7 @@ const Friends = () => {
   // Send friend request mutation
   const sendRequest = useMutation({
     mutationFn: async (username: string) => {
-      const res = await fetch('http://localhost:8000/friend_requests', {
+      const res = await fetch('http://localhost:8000/friend-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
