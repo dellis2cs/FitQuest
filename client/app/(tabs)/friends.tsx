@@ -20,7 +20,7 @@ interface Friend {
   id: string
   username: string
   avatar_url: string | null
-  level: number
+  current_level: number
   total_xp: number
   status: 'online' | 'offline'
   last_active?: string
@@ -38,7 +38,7 @@ interface SearchResult {
   id: string
   username: string
   avatar_url: string | null
-  level: number
+  current_level: number
   total_xp: number
   is_friend: boolean
 }
@@ -148,7 +148,7 @@ const Friends = () => {
         <View style={styles.friendDetails}>
           <Text style={styles.friendName}>{friend.username}</Text>
           <Text style={styles.friendSubtitle}>
-            Level {friend.level} • {friend.total_xp} XP
+            Level {friend.current_level} • {friend.total_xp} XP
           </Text>
         </View>
       </View>
@@ -195,7 +195,7 @@ const Friends = () => {
         <View style={styles.searchDetails}>
           <Text style={styles.searchName}>{result.username}</Text>
           <Text style={styles.searchLevel}>
-            Level {result.level} • {result.total_xp.toLocaleString()} XP
+            Level {result.current_level} • {result.total_xp.toLocaleString()} XP
           </Text>
         </View>
       </View>

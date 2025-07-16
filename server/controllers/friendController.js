@@ -6,7 +6,7 @@ const searchUsers = async (req, res) => {
   const { user } = req;
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, avatar_url, total_xp, level")
+    .select("id, username, avatar_url, total_xp, current_level")
     .ilike("username", search)
     .neq("id", user.id)
     .limit(20);
@@ -105,22 +105,37 @@ async function respondRequest(req, res) {
 
 async function listFriends(req, res) {
   const userId = req.user.id;
-  console.log(userId);
-  // get everyone you sent requests to AND everyone who sent you, where status='accepted'
+
+  // grab id, username, avatar_url, total_xp, current_level from both sides
   const { data, error } = await supabase
     .from("friend_requests")
     .select(
       `
-      requester:requester_id ( id, username, avatar_url ),
-      recipient:recipient_id ( id, username, avatar_url )
+      requester:requester_id (
+        id,
+        username,
+        avatar_url,
+        total_xp,
+        current_level
+      ),
+      recipient:recipient_id (
+        id,
+        username,
+        avatar_url,
+        total_xp,
+        current_level
+      )
     `
     )
     .or(
       `and(requester_id.eq.${userId},status.eq.accepted),and(recipient_id.eq.${userId},status.eq.accepted)`
     );
-  if (error) return res.status(500).json({ message: error.message });
 
-  // normalize into one list of “other” profiles
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  // normalize into one flat list with the fields your front-end needs
   const friends = data.map((row) => {
     const isRequester = row.requester.id === userId;
     const other = isRequester ? row.recipient : row.requester;
@@ -128,10 +143,12 @@ async function listFriends(req, res) {
       id: other.id,
       username: other.username,
       avatar_url: other.avatar_url,
+      total_xp: other.total_xp,
+      current_level: other.current_level,
     };
   });
-  console.log(friends);
-  res.json(friends);
+
+  return res.json(friends);
 }
 
 module.exports = {
