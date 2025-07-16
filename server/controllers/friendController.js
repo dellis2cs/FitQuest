@@ -79,28 +79,40 @@ const listPending = async (req, res) => {
 
 // in friendController.js
 async function respondRequest(req, res) {
-  const { id } = req.params; // the request’s PK
-  const { action } = req.body; // 'accept' or 'reject'
+  const { id } = req.params;
+  const { action } = req.body;
   const userId = req.user.id;
 
-  // only the recipient can respond
+  // ensure only the recipient can respond
   const { data: fr, error: fetchErr } = await supabase
     .from("friend_requests")
     .select("requester_id, recipient_id")
     .eq("id", id)
     .single();
+
   if (fetchErr) return res.status(400).json({ message: "Invalid request" });
-  if (fr.recipient_id !== userId) return res.status(403).end();
+  if (fr.recipient_id !== userId)
+    return res.status(403).json({ message: "Not allowed" });
 
-  // update the status
-  const newStatus = action === "accept" ? "accepted" : "rejected";
-  const { error: updateErr } = await supabase
-    .from("friend_requests")
-    .update({ status: newStatus })
-    .eq("id", id);
-  if (updateErr) return res.status(500).json({ message: updateErr.message });
+  if (action === "accept") {
+    const { error: updateErr } = await supabase
+      .from("friend_requests")
+      .update({ status: "accepted" })
+      .eq("id", id);
 
-  return res.status(200).json({ id, status: newStatus });
+    if (updateErr) return res.status(500).json({ message: updateErr.message });
+    return res.status(200).json({ id, status: "accepted" });
+  } else if (action === "reject") {
+    const { error: deleteErr } = await supabase
+      .from("friend_requests")
+      .delete()
+      .eq("id", id);
+
+    if (deleteErr) return res.status(500).json({ message: deleteErr.message });
+    return res.status(200).json({ id, status: "deleted" });
+  } else {
+    return res.status(400).json({ message: "Unknown action" });
+  }
 }
 
 async function listFriends(req, res) {
