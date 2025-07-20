@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AuthContext } from '../context/authContext'
+import { useRouter } from 'expo-router'
 
 // Types
 interface Friend {
@@ -46,6 +47,7 @@ interface SearchResult {
 const Friends = () => {
   const { token } = useContext(AuthContext)
   const queryClient = useQueryClient()
+  const router = useRouter()
   const [view, setView] = useState<'friends' | 'requests'>('friends')
 
   const BASE = 'http://localhost:8000'
@@ -140,24 +142,34 @@ const Friends = () => {
     }
   }
 
+  // Navigate to friend's profile
+  const navigateToProfile = (userId: string) => {
+    router.push(`/profile/${userId}`)
+  }
+
   // UI components
   const FriendCard = ({ friend }: { friend: Friend }) => (
-    <View style={styles.friendCard}>
-      <View style={styles.friendInfo}>
-        <Image source={{ uri: friend.avatar_url || undefined }} style={styles.avatar} />
-        <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{friend.username}</Text>
-          <Text style={styles.friendSubtitle}>
-            Level {friend.current_level} • {friend.total_xp} XP
-          </Text>
+    <TouchableOpacity onPress={() => navigateToProfile(friend.id)}>
+      <View style={styles.friendCard}>
+        <View style={styles.friendInfo}>
+          <Image source={{ uri: friend.avatar_url || undefined }} style={styles.avatar} />
+          <View style={styles.friendDetails}>
+            <Text style={styles.friendName}>{friend.username}</Text>
+            <Text style={styles.friendSubtitle}>
+              Level {friend.current_level} • {friend.total_xp} XP
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   )
 
   const PendingRequestCard = ({ request }: { request: PendingRequest }) => (
     <View style={styles.requestCard}>
-      <View style={styles.requestInfo}>
+      <TouchableOpacity 
+        style={styles.requestInfo}
+        onPress={() => navigateToProfile(request.requester_id)}
+      >
         <Image
           source={{ uri: request.requester_avatar || undefined }}
           style={styles.requestAvatar}
@@ -168,7 +180,7 @@ const Friends = () => {
             Requested {new Date(request.requested_at).toLocaleDateString()}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
       <View style={styles.requestActions}>
         <TouchableOpacity
           style={styles.declineButton}
@@ -189,26 +201,31 @@ const Friends = () => {
   )
 
   const SearchResultCard = ({ result }: { result: SearchResult }) => (
-    <View style={styles.searchResultCard}>
-      <View style={styles.searchResultInfo}>
-        <Image source={{ uri: result.avatar_url || undefined }} style={styles.searchAvatar} />
-        <View style={styles.searchDetails}>
-          <Text style={styles.searchName}>{result.username}</Text>
-          <Text style={styles.searchLevel}>
-            Level {result.current_level} • {result.total_xp.toLocaleString()} XP
-          </Text>
+    <TouchableOpacity onPress={() => navigateToProfile(result.id)}>
+      <View style={styles.searchResultCard}>
+        <View style={styles.searchResultInfo}>
+          <Image source={{ uri: result.avatar_url || undefined }} style={styles.searchAvatar} />
+          <View style={styles.searchDetails}>
+            <Text style={styles.searchName}>{result.username}</Text>
+            <Text style={styles.searchLevel}>
+              Level {result.current_level} • {result.total_xp.toLocaleString()} XP
+            </Text>
+          </View>
         </View>
+        <TouchableOpacity
+          style={[styles.addButton, result.is_friend && styles.addButtonDisabled]}
+          disabled={result.is_friend}
+          onPress={(e) => {
+            e.stopPropagation() // Prevent navigation when clicking add button
+            sendRequest.mutate(result.username)
+          }}
+        >
+          <Text style={[styles.addButtonText, result.is_friend && styles.addButtonTextDisabled]}>
+            {result.is_friend ? 'Friends' : 'Add'}
+          </Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={[styles.addButton, result.is_friend && styles.addButtonDisabled]}
-        disabled={result.is_friend}
-        onPress={() => sendRequest.mutate(result.username)}
-      >
-        <Text style={[styles.addButtonText, result.is_friend && styles.addButtonTextDisabled]}>
-          {result.is_friend ? 'Friends' : 'Add'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   )
 
   const EmptyState = () => (
