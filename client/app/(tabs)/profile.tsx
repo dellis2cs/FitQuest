@@ -1,5 +1,4 @@
 import React, { useState, useContext } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   View,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../context/authContext';
+import EditProfileModal from '../components/EditProfileModal';
 
 // Updated Stat interface matches backend response
 interface Stat {
@@ -29,6 +29,7 @@ interface Stat {
 
 interface UserData {
   username: string;
+  email: string;
   total_xp: number;
   current_level: number;
   stats: Stat[];
@@ -71,6 +72,7 @@ export default function ProfileScreen() {
   const { signOut, token } = useContext(AuthContext);
   const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const router = useRouter();
 
   const { data: userData, isLoading, error } = useQuery<UserData, Error>({
@@ -110,6 +112,7 @@ export default function ProfileScreen() {
 
   const {
     username,
+    email,
     total_xp,
     current_level,
     stats,
@@ -187,7 +190,7 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* Sign Out Modal */}
+      {/* Settings Modal */}
       <Modal
         transparent
         animationType="fade"
@@ -196,32 +199,54 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Sign Out</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to sign out of your account?
-            </Text>
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.signOutButton]}
-                onPress={async () => {
-                  setModalVisible(false);
-                  queryClient.removeQueries(); 
-                  await signOut();
-                  router.replace('/');
-                }}
-              >
-                <Text style={styles.signOutText}>Sign Out</Text>
-              </Pressable>
-            </View>
+            <Text style={styles.modalTitle}>Settings</Text>
+            
+            <Pressable
+              style={styles.modalOption}
+              onPress={() => {
+                setModalVisible(false);
+                setEditModalVisible(true);
+              }}
+            >
+              <Text style={styles.modalOptionText}>Edit Profile</Text>
+            </Pressable>
+            
+            <View style={styles.modalDivider} />
+            
+            <Pressable
+              style={styles.modalOption}
+              onPress={async () => {
+                setModalVisible(false);
+                queryClient.removeQueries(); 
+                await signOut();
+                router.replace('/');
+              }}
+            >
+              <Text style={[styles.modalOptionText, styles.signOutOptionText]}>Sign Out</Text>
+            </Pressable>
+            
+            <Pressable
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
+
+      {/* Edit Profile Modal */}
+      {userData && (
+        <EditProfileModal
+          visible={editModalVisible}
+          onClose={() => setEditModalVisible(false)}
+          currentData={{
+            username: userData.username,
+            email: userData.email,
+            avatar_url: userData.avatar_url,
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -499,8 +524,7 @@ const styles = StyleSheet.create({
     width: '85%',
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
+    padding: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -511,43 +535,41 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '500',
     color: '#1a1a1a',
-    marginBottom: 12,
+    marginBottom: 20,
     letterSpacing: -0.2,
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: '#64748b',
-    marginBottom: 32,
     textAlign: 'center',
-    lineHeight: 24,
+  },
+  modalOption: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#1a1a1a',
     fontWeight: '400',
   },
-  modalButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 12,
+  signOutOptionText: {
+    color: '#dc2626',
+    fontWeight: '500',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 8,
   },
   modalButton: {
-    flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 16,
   },
   cancelButton: {
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  signOutButton: {
-    backgroundColor: '#485c11',
-  },
   cancelText: {
     color: '#475569',
-    fontWeight: '500',
-    fontSize: 16,
-  },
-  signOutText: {
-    color: '#ffffff',
     fontWeight: '500',
     fontSize: 16,
   },

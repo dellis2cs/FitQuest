@@ -1,5 +1,22 @@
 // controllers/profileController.js
 const { supabase } = require("../db/supabaseClient");
+const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
 
 function xpForLevel(level, baseXp = 100, growthRate = 1.5) {
   if (level <= 1) return 0;
@@ -257,4 +274,244 @@ const setMaxes = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, getUserProfile, xpForLevel, setMaxes };
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { username, email, currentPassword, newPassword } = req.body;
+
+    console.log("Update profile request:", {
+      username,
+      email,
+      hasPassword: !!currentPassword,
+    });
+
+    // Prepare update object
+    const updateData = {};
+
+    // Handle username update
+    if (username && username.trim()) {
+      // Check if username is taken by another user
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .neq("id", userId)
+        .maybeSingle();
+
+      if (userCheckError && userCheckError.code !== "PGRST116") {
+        console.error("Username check error:", userCheckError);
+        return res
+          .status(500)
+          .json({ message: "Error checking username availability" });
+      }
+
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      updateData.username = username;
+    }
+
+    // Handle email update
+    if (email && email.trim()) {
+      // Check if email is taken by another user
+      const { data: existingEmail, error: emailCheckError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .neq("id", userId)
+        .maybeSingle();
+
+      if (emailCheckError && emailCheckError.code !== "PGRST116") {
+        console.error("Email check error:", emailCheckError);
+        return res
+          .status(500)
+          .json({ message: "Error checking email availability" });
+      }
+
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      updateData.email = email;
+    }
+
+    // Handle password update
+    if (currentPassword && newPassword) {
+      // Verify current password
+      const { data: user, error: fetchError } = await supabase
+        .from("profiles")
+        .select("password")
+        .eq("id", userId)
+        .single();
+
+      if (fetchError || !user) {
+        return res.status(400).json({ message: "Error verifying password" });
+      }
+
+      const isValidPassword = await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+      if (!isValidPassword) {
+        return res
+          .status(400)
+          .json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    // Only update if there are changes
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "No changes to update" });
+    }
+
+    // Update profile
+    updateData.updated_at = new Date().toISOString();
+
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from("profiles")
+      .update(updateData)
+      .eq("id", userId)
+      .select("id, username, email, avatar_url")
+      .single();
+
+    if (updateError) {
+      console.error("Profile update error:", updateError);
+      return res.status(500).json({ message: "Failed to update profile" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      profile: updatedProfile,
+    });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+// Separate endpoint for avatar upload
+const updateAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const avatarFile = req.file;
+
+    console.log("Avatar upload request:", { hasFile: !!avatarFile });
+
+    if (!avatarFile) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Create a separate Supabase client with service role key for storage operations
+    const { createClient } = require("@supabase/supabase-js");
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY // This bypasses RLS
+    );
+
+    // Get current avatar URL to delete old file
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", userId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching current profile:", fetchError);
+      return res.status(500).json({ message: "Error updating avatar" });
+    }
+
+    console.log("Current avatar URL:", currentProfile?.avatar_url);
+
+    // Delete all existing avatars for this user
+    try {
+      // List all files in the user's folder
+      const { data: existingFiles, error: listError } =
+        await supabaseAdmin.storage.from("avatars").list(userId, {
+          limit: 100,
+          offset: 0,
+        });
+
+      if (listError) {
+        console.error("Error listing files:", listError);
+      } else if (existingFiles && existingFiles.length > 0) {
+        // Delete all existing files for this user
+        const filesToDelete = existingFiles.map(
+          (file) => `${userId}/${file.name}`
+        );
+        console.log("Files found in user folder:", filesToDelete);
+
+        const { data: deleteData, error: deleteError } =
+          await supabaseAdmin.storage.from("avatars").remove(filesToDelete);
+
+        if (deleteError) {
+          console.error("Error deleting old avatars:", deleteError);
+        } else {
+          console.log("Successfully deleted old avatars:", deleteData);
+        }
+      } else {
+        console.log("No existing files found in user folder");
+      }
+    } catch (error) {
+      console.error("Error in cleanup process:", error);
+      // Continue with upload even if cleanup fails
+    }
+
+    // Upload new avatar using admin client
+    const fileExt = avatarFile.originalname.split(".").pop() || "jpg";
+    const fileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("avatars")
+      .upload(filePath, avatarFile.buffer, {
+        contentType: avatarFile.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Avatar upload error:", uploadError);
+      return res.status(500).json({ message: "Failed to upload avatar" });
+    }
+
+    // Get public URL
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from("avatars").getPublicUrl(filePath);
+
+    // Update profile with new avatar URL
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+
+    if (updateError) {
+      console.error("Error updating avatar URL:", updateError);
+      // Try to delete the uploaded file
+      await supabaseAdmin.storage.from("avatars").remove([filePath]);
+      return res.status(500).json({ message: "Failed to update avatar URL" });
+    }
+
+    res.status(200).json({
+      message: "Avatar updated successfully",
+      avatar_url: publicUrl,
+    });
+  } catch (err) {
+    console.error("Update avatar error:", err);
+    res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+module.exports = {
+  getProfile,
+  getUserProfile,
+  xpForLevel,
+  setMaxes,
+  updateProfile,
+  updateAvatar,
+};
