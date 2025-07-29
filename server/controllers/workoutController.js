@@ -246,6 +246,53 @@ const getSessions = async (req, res) => {
   return res.json(sessions);
 };
 
+const getSessionsPaginated = async (req, res) => {
+  const profile_id = req.user.id;
+  const { offset = 0, limit = 15 } = req.query;
+
+  // Fetch sessions with their movements, with pagination
+  const { data, error, count } = await supabase
+    .from("workout_sessions")
+    .select(
+      `
+      id,
+      performed_at,
+      workout_movements (
+        xp_awarded
+      )
+    `,
+      { count: "exact" }
+    )
+    .eq("profile_id", profile_id)
+    .order("performed_at", { ascending: false })
+    .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+  if (error) {
+    return res.status(500).json({ message: error.message });
+  }
+
+  // Map into a flat shape with counts & sum
+  const sessions = data.map((s) => {
+    const movementCount = s.workout_movements.length;
+    const totalXp = s.workout_movements.reduce(
+      (sum, m) => sum + (m.xp_awarded || 0),
+      0
+    );
+    return {
+      id: s.id,
+      performed_at: s.performed_at,
+      movement_count: movementCount,
+      total_xp: totalXp,
+    };
+  });
+
+  return res.json({
+    sessions,
+    total: count,
+    hasMore: parseInt(offset) + parseInt(limit) < count,
+  });
+};
+
 const getSessionDetails = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -293,4 +340,97 @@ const getSessionDetails = async (req, res) => {
   }
 };
 
-module.exports = { createWorkout, getWorkouts, getSessions, getSessionDetails };
+const getWorkoutStreak = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get the current date and the first day of the current month
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // Fetch all workout sessions for the current month
+    const { data: sessions, error } = await supabase
+      .from("workout_sessions")
+      .select("performed_at")
+      .eq("profile_id", userId)
+      .gte("performed_at", firstDayOfMonth.toISOString())
+      .lte("performed_at", lastDayOfMonth.toISOString())
+      .order("performed_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching workout streak:", error);
+      return res.status(500).json({ message: error.message });
+    }
+
+    // Create a map of dates with workouts
+    const workoutDates = new Set();
+    sessions.forEach((session) => {
+      const date = new Date(session.performed_at).toDateString();
+      workoutDates.add(date);
+    });
+
+    // Calculate current streak
+    let currentStreak = 0;
+    let checkDate = new Date(now);
+
+    // Start from today and go backwards
+    while (true) {
+      const dateStr = checkDate.toDateString();
+      if (workoutDates.has(dateStr)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else if (
+        currentStreak === 0 &&
+        checkDate.toDateString() === now.toDateString()
+      ) {
+        // Today hasn't been worked out yet, check yesterday
+        checkDate.setDate(checkDate.getDate() - 1);
+        continue;
+      } else {
+        break;
+      }
+    }
+
+    // Calculate longest streak in the month
+    let longestStreak = 0;
+    let tempStreak = 0;
+    const sortedDates = Array.from(workoutDates).sort();
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      if (
+        i === 0 ||
+        new Date(sortedDates[i]).getDate() -
+          new Date(sortedDates[i - 1]).getDate() ===
+          1
+      ) {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else {
+        tempStreak = 1;
+      }
+    }
+
+    return res.json({
+      currentMonth: now.getMonth(),
+      currentYear: now.getFullYear(),
+      workoutDates: Array.from(workoutDates),
+      currentStreak,
+      longestStreak,
+      totalWorkouts: sessions.length,
+      daysInMonth: lastDayOfMonth.getDate(),
+    });
+  } catch (err) {
+    console.error("getWorkoutStreak error:", err);
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+module.exports = {
+  createWorkout,
+  getWorkouts,
+  getSessions,
+  getSessionDetails,
+  getWorkoutStreak,
+  getSessionsPaginated,
+};

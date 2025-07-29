@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useContext, useState } from 'react';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../context/authContext';
+import WorkoutCalendar from '../components/WorkoutCalender';
 
 // match whatever your backend returns
 export interface Session {
@@ -19,6 +21,16 @@ export interface Session {
   performed_at: string;
   movement_count: number;
   total_xp: number;
+}
+
+interface StreakData {
+  currentMonth: number;
+  currentYear: number;
+  workoutDates: string[];
+  currentStreak: number;
+  longestStreak: number;
+  totalWorkouts: number;
+  daysInMonth: number;
 }
 
 const SessionCard: React.FC<{ session: Session }> = ({ session }) => {
@@ -32,27 +44,20 @@ const SessionCard: React.FC<{ session: Session }> = ({ session }) => {
     });
   };
 
-
   return (
     <View style={styles.SessionCard}>
       <View style={styles.workoutHeader}>
         <View style={styles.workoutInfo}>
           <Text style={styles.workoutMovement}>{formatDate(session.performed_at)}</Text>
-
         </View>
       </View>
       
       <View style={styles.workoutStats}>
-        
-          <>
-            <View style={styles.workoutStat}>
-              <Text style={styles.workoutStatLabel}>Movments</Text>
-              <Text style={styles.workoutStatValue}>{session.movement_count}</Text>
-            </View>
-            <View style={styles.workoutStatDivider} />
-            
-          </>
-
+        <View style={styles.workoutStat}>
+          <Text style={styles.workoutStatLabel}>Movements</Text>
+          <Text style={styles.workoutStatValue}>{session.movement_count}</Text>
+        </View>
+        <View style={styles.workoutStatDivider} />
         <View style={styles.workoutStat}>
           <Text style={styles.workoutStatLabel}>XP</Text>
           <Text style={styles.workoutStatXp}>+{Math.floor(session.total_xp)}</Text>
@@ -65,8 +70,26 @@ const SessionCard: React.FC<{ session: Session }> = ({ session }) => {
 export default function WorkoutScreen() {
   const { token, signOut } = useContext(AuthContext);
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const {
+  // Fetch workout streak data
+  const { 
+    data: streakData, 
+    isLoading: streakLoading,
+    refetch: refetchStreak 
+  } = useQuery<StreakData>({
+    queryKey: ['workoutStreak'],
+    queryFn: async () => {
+      const res = await fetch('http://localhost:8000/workout-streak', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch streak data');
+      return res.json();
+    },
+  });
+
+  // Use infinite query for paginated sessions
+   const {
     data: workouts,
     isLoading,
     error,
@@ -91,9 +114,11 @@ export default function WorkoutScreen() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  
 
-  if (isLoading) {
+
+
+  
+  if (streakLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1a1a1a" />
@@ -101,53 +126,73 @@ export default function WorkoutScreen() {
     );
   }
 
-  if (error || !workouts) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>
-          {error?.message || 'Error loading workouts'}
-        </Text>
-        <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-          <Text style={styles.retryText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+
+
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
             <Text style={styles.headerButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Workouts</Text>
+          <Text style={styles.headerTitle}>Dashboard</Text>
           <TouchableOpacity onPress={() => router.push('add-workout')} style={styles.headerButton}>
             <Text style={styles.headerButtonText}>＋</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Workouts List */}
-        <View style={styles.workoutsSection}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <Text style={styles.sectionSubtitle}>
-            Track your progress with detailed workout insights
-          </Text>
-          
-          <FlatList
-            data={workouts}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item: session }) => (
-  <TouchableOpacity
-    onPress={() => router.push(`/sessions/${session.id}`)}
-  >
-    <SessionCard session={session} />
-  </TouchableOpacity>
-)}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
+        <View style={styles.dashboardContent}>
+          {/* Streak Stats */}
+          {streakData && (
+            <View style={styles.streakSection}>
+              <View style={styles.streakCards}>
+                <View style={styles.streakCard}>
+                  <Text style={styles.streakNumber}>{streakData.currentStreak}</Text>
+                  <Text style={styles.streakLabel}>Current Streak</Text>
+                </View>
+                <View style={styles.streakCard}>
+                  <Text style={styles.streakNumber}>{streakData.totalWorkouts}</Text>
+                  <Text style={styles.streakLabel}>This Month</Text>
+                </View>
+                <View style={styles.streakCard}>
+                  <Text style={styles.streakNumber}>{streakData.longestStreak}</Text>
+                  <Text style={styles.streakLabel}>Best Streak</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Calendar */}
+          {streakData && (
+            <WorkoutCalendar
+              workoutDates={streakData.workoutDates}
+              currentMonth={streakData.currentMonth}
+              currentYear={streakData.currentYear}
+              daysInMonth={streakData.daysInMonth}
+            />
+          )}
+
+          {/* Recent Sessions */}
+          <View style={styles.sessionsSection}>
+            <Text style={styles.sectionTitle}>Recent Sessions</Text>
+            <Text style={styles.sectionSubtitle}>
+              Track your progress with detailed workout insights
+            </Text>
+            
+            {workouts.map((session) => (
+              <TouchableOpacity
+                key={session.id}
+                onPress={() => router.push(`/sessions/${session.id}`)}
+              >
+                <SessionCard session={session} />
+              </TouchableOpacity>
+            ))}
+
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -200,21 +245,59 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     letterSpacing: -0.5,
   },
-  workoutsSection: {
+  dashboardContent: {
     paddingHorizontal: 32,
   },
-  sectionTitle: {
+  streakSection: {
+    marginBottom: 24,
+  },
+  streakCards: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  streakCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  streakNumber: {
     fontSize: 32,
-    fontWeight: '300',
+    fontWeight: '600',
+    color: '#1a1a1a',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  streakLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sessionsSection: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '400',
     color: '#1a1a1a',
     marginBottom: 8,
-    letterSpacing: -0.8,
-    lineHeight: 38,
+    letterSpacing: -0.3,
   },
   sectionSubtitle: {
     fontSize: 16,
     color: '#6b7280',
-    marginBottom: 40,
+    marginBottom: 24,
     lineHeight: 24,
     fontWeight: '400',
   },
@@ -246,24 +329,6 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 6,
     letterSpacing: -0.3,
-  },
-  workoutDate: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '400',
-  },
-  statBadge: {
-    backgroundColor:'#485c11',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  statBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
   workoutStats: {
     flexDirection: 'row',
@@ -300,29 +365,18 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     letterSpacing: -0.2,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  loadMoreButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    backgroundColor: '#fafafa',
-    paddingHorizontal: 32,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  errorText: {
+  loadMoreText: {
     fontSize: 16,
-    color: '#dc2626',
-    marginBottom: 20,
-    textAlign: 'center',
-    fontWeight: '400',
-  },
-  retryButton: {
-    backgroundColor: '#1a1a1a',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: '#ffffff',
-    fontSize: 14,
     fontWeight: '500',
+    color: '#1a1a1a',
   },
 });

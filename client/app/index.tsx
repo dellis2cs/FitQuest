@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeTab: {
-    borderBottomColor: "#288afa",  // your brand color
+    borderBottomColor: "#468848",  // your brand color
     borderBottomWidth: 2,
   },
   tabText: {
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   activeTabText: {
-    color: "#288afa",
+    color: "#468848",
     fontWeight: "600",
   },
 });
