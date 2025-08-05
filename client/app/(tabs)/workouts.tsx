@@ -33,6 +33,12 @@ interface StreakData {
   daysInMonth: number;
 }
 
+interface PaginatedResponse {
+  sessions: Session[];
+  total: number;
+  hasMore: boolean;
+}
+
 const SessionCard: React.FC<{ session: Session }> = ({ session }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -89,36 +95,55 @@ export default function WorkoutScreen() {
   });
 
   // Use infinite query for paginated sessions
-   const {
-    data: workouts,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<Session[], Error>({
-    queryKey: ['workouts'],
-    queryFn: async () => {
-      const res = await fetch('http://localhost:8000/sessions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: sessionsLoading,
+    refetch: refetchSessions,
+  } = useInfiniteQuery<PaginatedResponse>({
+    queryKey: ['workoutSessions'],
+    queryFn: async ({ pageParam }) => {
+      const res = await fetch(
+        `http://localhost:8000/sessions/paginated?offset=${pageParam}&limit=15`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (res.status === 401) {
         await signOut();
         router.replace('/');
         throw new Error('unauthorized');
       }
-      if (!res.ok) {
-        throw new Error('Failed to fetch workouts');
-      }
+      if (!res.ok) throw new Error('Failed to fetch sessions');
       return res.json();
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => {
+      const loadedCount = pages.reduce((sum, page) => sum + page.sessions.length, 0);
+      return lastPage.hasMore ? loadedCount : undefined;
     },
     staleTime: 5 * 60_000,
     retry: false,
     refetchOnWindowFocus: false,
   });
 
+  const sessions = data?.pages.flatMap(page => page.sessions) || [];
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refetchStreak(), refetchSessions()]);
+    setRefreshing(false);
+  };
 
-  
-  if (streakLoading) {
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  if (sessionsLoading || streakLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1a1a1a" />
@@ -126,75 +151,102 @@ export default function WorkoutScreen() {
     );
   }
 
+  const renderFooter = () => {
+    if (!hasNextPage) return null;
+    
+    return (
+      <View style={styles.footerLoader}>
+        {isFetchingNextPage ? (
+          <ActivityIndicator size="small" color="#1a1a1a" />
+        ) : (
+          <TouchableOpacity
+            style={styles.loadMoreButton}
+            onPress={handleLoadMore}
+          >
+            <Text style={styles.loadMoreText}>Load More</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const renderSessionItem = ({ item }: { item: Session }) => (
+    <TouchableOpacity
+      onPress={() => router.push(`/sessions/${item.id}`)}
+    >
+      <SessionCard session={item} />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={styles.scrollContent}
+      <FlatList
+        data={sessions}
+        keyExtractor={(item) => item.id}
+        renderItem={renderSessionItem}
+        ListHeaderComponent={
+          <>
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+                <Text style={styles.headerButtonText}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Dashboard</Text>
+              <TouchableOpacity onPress={() => router.push('add-workout')} style={styles.headerButton}>
+                <Text style={styles.headerButtonText}>＋</Text>
+              </TouchableOpacity>
+            </View>
 
+            <View style={styles.dashboardContent}>
+              {/* Streak Stats */}
+              {streakData && (
+                <View style={styles.streakSection}>
+                  <View style={styles.streakCards}>
+                    <View style={styles.streakCard}>
+                      <Text style={styles.streakNumber}>{streakData.currentStreak}</Text>
+                      <Text style={styles.streakLabel}>Current Streak</Text>
+                    </View>
+                    <View style={styles.streakCard}>
+                      <Text style={styles.streakNumber}>{streakData.totalWorkouts}</Text>
+                      <Text style={styles.streakLabel}>This Month</Text>
+                    </View>
+                    <View style={styles.streakCard}>
+                      <Text style={styles.streakNumber}>{streakData.longestStreak}</Text>
+                      <Text style={styles.streakLabel}>Best Streak</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
 
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-          <TouchableOpacity onPress={() => router.push('add-workout')} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>＋</Text>
-          </TouchableOpacity>
-        </View>
+              {/* Calendar */}
+              {streakData && (
+                <WorkoutCalendar
+                  workoutDates={streakData.workoutDates}
+                  currentMonth={streakData.currentMonth}
+                  currentYear={streakData.currentYear}
+                  daysInMonth={streakData.daysInMonth}
+                />
+              )}
 
-        <View style={styles.dashboardContent}>
-          {/* Streak Stats */}
-          {streakData && (
-            <View style={styles.streakSection}>
-              <View style={styles.streakCards}>
-                <View style={styles.streakCard}>
-                  <Text style={styles.streakNumber}>{streakData.currentStreak}</Text>
-                  <Text style={styles.streakLabel}>Current Streak</Text>
-                </View>
-                <View style={styles.streakCard}>
-                  <Text style={styles.streakNumber}>{streakData.totalWorkouts}</Text>
-                  <Text style={styles.streakLabel}>This Month</Text>
-                </View>
-                <View style={styles.streakCard}>
-                  <Text style={styles.streakNumber}>{streakData.longestStreak}</Text>
-                  <Text style={styles.streakLabel}>Best Streak</Text>
-                </View>
+              {/* Recent Sessions Header */}
+              <View style={styles.sessionsSection}>
+                <Text style={styles.sectionTitle}>Recent Sessions</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Track your progress with detailed workout insights
+                </Text>
               </View>
             </View>
-          )}
-
-          {/* Calendar */}
-          {streakData && (
-            <WorkoutCalendar
-              workoutDates={streakData.workoutDates}
-              currentMonth={streakData.currentMonth}
-              currentYear={streakData.currentYear}
-              daysInMonth={streakData.daysInMonth}
-            />
-          )}
-
-          {/* Recent Sessions */}
-          <View style={styles.sessionsSection}>
-            <Text style={styles.sectionTitle}>Recent Sessions</Text>
-            <Text style={styles.sectionSubtitle}>
-              Track your progress with detailed workout insights
-            </Text>
-            
-            {workouts.map((session) => (
-              <TouchableOpacity
-                key={session.id}
-                onPress={() => router.push(`/sessions/${session.id}`)}
-              >
-                <SessionCard session={session} />
-              </TouchableOpacity>
-            ))}
-
-          </View>
-        </View>
-      </ScrollView>
+          </>
+        }
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.1}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
@@ -204,7 +256,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fafafa',
   },
-  scrollContent: {
+  listContent: {
     paddingBottom: 40,
   },
   loadingContainer: {
@@ -286,6 +338,7 @@ const styles = StyleSheet.create({
   },
   sessionsSection: {
     marginTop: 8,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 24,
@@ -297,7 +350,6 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 16,
     color: '#6b7280',
-    marginBottom: 24,
     lineHeight: 24,
     fontWeight: '400',
   },
@@ -306,6 +358,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 28,
     marginBottom: 20,
+    marginHorizontal: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -365,12 +418,16 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     letterSpacing: -0.2,
   },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
   loadMoreButton: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
+    marginHorizontal: 32,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },

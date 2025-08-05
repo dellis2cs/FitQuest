@@ -12,8 +12,8 @@ const {
 router.post("/workout", protect, createWorkout);
 router.get("/workouts", protect, getWorkouts);
 router.get("/sessions", protect, getSessions);
-router.get("/sessions/:sessionId", protect, getSessionDetails);
 router.get("/sessions/paginated", protect, getSessionsPaginated);
+router.get("/sessions/:sessionId", protect, getSessionDetails);
 router.get("/workout-streak", protect, getWorkoutStreak);
 
 module.exports = router;
