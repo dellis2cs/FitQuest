@@ -7,6 +7,7 @@ const authRouter = require("./routes/authRoute");
 const profileRouter = require("./routes/profileRoute");
 const workoutRouter = require("./routes/workoutRoute");
 const friendRouter = require("./routes/friendRoute");
+const guildRouter = require("./routes/guildRoute");
 
 app.use(cors());
 app.use(express.json());
@@ -15,6 +16,7 @@ app.use(authRouter);
 app.use(profileRouter);
 app.use(workoutRouter);
 app.use(friendRouter);
+app.use(guildRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello from Node API Server Updated");
