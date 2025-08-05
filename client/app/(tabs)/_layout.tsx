@@ -35,7 +35,7 @@ export default function TabsLayout(){
                 <Ionicons name="people" size={size} color={color} />,
             }}
         />
-        <Tabs.Screen
+        {/* <Tabs.Screen
             name="guilds"
             options={{
             title: "Guilds",
@@ -43,7 +43,7 @@ export default function TabsLayout(){
             tabBarIcon: ({ color, size }) =>
                 <Ionicons name="people-circle" size={size} color={color} />,
             }}
-        />
+        /> */}
         <Tabs.Screen
             name="profile"
             options={{

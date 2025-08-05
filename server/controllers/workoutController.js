@@ -28,7 +28,7 @@ const createWorkout = async (req, res) => {
   try {
     const profile_id = req.user.id;
     const { performed_at, movements, stat_category } = req.body;
-    // console.log(req.body);
+    console.log(req.body);
 
     // 1️⃣ Validate inputs
     if (!Array.isArray(movements) || movements.length === 0) {
@@ -143,6 +143,7 @@ const createWorkout = async (req, res) => {
       movement: m.movement,
       weight: m.weight,
       reps: m.reps,
+      sets: m.sets,
       duration_seconds: m.duration_seconds,
       stat_category: m.stat_category,
       xp_awarded: m.xp_awarded,
@@ -311,7 +312,8 @@ const getSessionDetails = async (req, res) => {
         duration_seconds,
         stat_category,
         xp_awarded,
-        performed_at
+        performed_at,
+        sets
         `
       )
       .eq("profile_id", userId)
@@ -331,6 +333,7 @@ const getSessionDetails = async (req, res) => {
       stat_category: w.stat_category,
       xp_awarded: w.xp_awarded,
       performed_at: w.performed_at,
+      sets: w.sets,
     }));
     console.log("Workouts fetched successfully:", workouts);
     return res.json(workouts);

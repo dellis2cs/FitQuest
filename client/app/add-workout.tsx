@@ -19,7 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 type MovementLine = {
   movement: string
   weight: string
-  reps: string         // for weights: reps, for cardio: duration
+  reps: string         // for weights: reps, for cardio: duration_seconds
+  sets: string
   type: 'Weights' | 'Stamina' | ''
 }
 
@@ -30,7 +31,7 @@ export default function AddWorkout() {
 
   // one or more movement lines
   const [lines, setLines] = useState<MovementLine[]>([
-    { movement: '', weight: '', reps: '', type: '' },
+    { movement: '', weight: '', reps: '', sets: '', type: '' },
   ])
 
   // mutation to create session + movements
@@ -41,10 +42,12 @@ export default function AddWorkout() {
         movements: lines.map(l => {
           const w = l.weight ? parseFloat(l.weight) : null
           const r = l.reps ? parseInt(l.reps, 10) : null
+          const s = l.sets ? parseInt(l.sets, 10): null
           return {
             movement: l.movement,
             weight: l.type === 'Weights' ? w : null,
             reps: l.type === 'Weights' ? r : null,
+            sets: l.type === 'Weights' ? s : null,
             duration_seconds: l.type === 'Stamina' ? r : null,
             stat_category: l.type === 'Weights' ? 'Strength' : 'Stamina',
             
@@ -183,6 +186,7 @@ export default function AddWorkout() {
                       }}
                     />
                   </View>
+                  
                   <View style={styles.inputHalf}>
                     <Text style={styles.inputLabel}>Reps</Text>
                     <TextInput
@@ -197,13 +201,27 @@ export default function AddWorkout() {
                       }}
                     />
                   </View>
+                  <View style={styles.inputHalf}>
+                    <Text style={styles.inputLabel}>Sets</Text>
+                    <TextInput
+                      placeholder="e.g. 2"
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={line.sets}
+                      onChangeText={t => {
+                        const copy = [...lines]
+                        copy[i].sets = t
+                        setLines(copy)
+                      }}
+                    />
+                  </View>
                 </View>
               )}
             </View>
           ))}
 
           <TouchableOpacity
-            onPress={() => setLines([...lines, { movement: '', weight: '', reps: '', type: '' }])}
+            onPress={() => setLines([...lines, { movement: '', weight: '', reps: '',sets: '', type: '' }])}
             style={styles.addBtn}
           >
             <Text style={styles.addText}>+ Add Movement</Text>

@@ -19,6 +19,7 @@ interface Movement {
   movement: string
   weight: number | null
   reps: number | null
+  sets: number | null
   duration_seconds: number | null
   stat_category: string
   xp_awarded: number
@@ -56,11 +57,15 @@ const MovementCard: React.FC<{ movement: Movement }> = ({ movement }) => {
               <Text style={styles.movementStatLabel}>Reps</Text>
               <Text style={styles.movementStatValue}>{movement.reps}</Text>
             </View>
+            <View style={styles.movementStat}>
+              <Text style={styles.movementStatLabel}>Sets</Text>
+              <Text style={styles.movementStatValue}>{movement.sets}</Text>
+            </View>
           </>
         )}
         <View style={styles.movementStatDivider} />
         <View style={styles.movementStat}>
-          <Text style={styles.movementStatLabel}>XP Gained</Text>
+          <Text style={styles.movementStatLabel}>XP</Text>
           <Text style={styles.movementStatXp}>+{Math.floor(movement.xp_awarded)}</Text>
         </View>
       </View>
