@@ -244,6 +244,9 @@ export default function ProfileScreen() {
             username: userData.username,
             email: userData.email,
             avatar_url: userData.avatar_url,
+            bench_1rm: userData.bench_1rm,
+            squat_1rm: userData.squat_1rm,
+            deadlift_1rm: userData.deadlift_1rm,
           }}
         />
       )}

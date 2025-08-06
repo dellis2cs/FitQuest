@@ -134,7 +134,7 @@ export default function SessionDetailScreen() {
         <View style={styles.summarySection}>
           <Text style={styles.sectionTitle}>Workout Summary</Text>
           <Text style={styles.sectionSubtitle}>
-            {data?.length || 0} movements • {Math.floor(totalXP)} total XP earned
+            {data?.length || 0} movement(s) • {Math.floor(totalXP)} total XP earned
           </Text>
         </View>
 

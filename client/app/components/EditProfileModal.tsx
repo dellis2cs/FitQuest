@@ -23,6 +23,9 @@ interface EditProfileModalProps {
     username: string;
     email: string;
     avatar_url: string;
+    bench_1rm?: number;
+    squat_1rm?: number;
+    deadlift_1rm?: number;
   };
 }
 
@@ -37,6 +40,11 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
   const [confirmPassword, setConfirmPassword] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
+  
+  // 1RM fields
+  const [bench1RM, setBench1RM] = useState(currentData.bench_1rm?.toString() || '');
+  const [squat1RM, setSquat1RM] = useState(currentData.squat_1rm?.toString() || '');
+  const [deadlift1RM, setDeadlift1RM] = useState(currentData.deadlift_1rm?.toString() || '');
 
   // Image picker
   const pickImage = async () => {
@@ -58,6 +66,31 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
       setAvatarUri(result.assets[0].uri);
     }
   };
+
+  // Update 1RM mutation
+  const update1RMMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('http://localhost:8000/maxes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bench_1rm: parseFloat(bench1RM) || 0,
+          squat_1rm: parseFloat(squat1RM) || 0,
+          deadlift_1rm: parseFloat(deadlift1RM) || 0,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to update 1RM values');
+      }
+
+      return res.json();
+    },
+  });
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -93,6 +126,15 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Failed to update profile');
+      }
+
+      // Update 1RM values if they've changed
+      const bench1RMChanged = parseFloat(bench1RM) !== currentData.bench_1rm;
+      const squat1RMChanged = parseFloat(squat1RM) !== currentData.squat_1rm;
+      const deadlift1RMChanged = parseFloat(deadlift1RM) !== currentData.deadlift_1rm;
+
+      if (bench1RMChanged || squat1RMChanged || deadlift1RMChanged) {
+        await update1RMMutation.mutateAsync();
       }
 
       // If avatar changed, upload it separately
@@ -139,6 +181,20 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
       return;
     }
 
+    // Validate 1RM values if provided
+    if (bench1RM && isNaN(parseFloat(bench1RM))) {
+      Alert.alert('Error', 'Bench 1RM must be a valid number');
+      return;
+    }
+    if (squat1RM && isNaN(parseFloat(squat1RM))) {
+      Alert.alert('Error', 'Squat 1RM must be a valid number');
+      return;
+    }
+    if (deadlift1RM && isNaN(parseFloat(deadlift1RM))) {
+      Alert.alert('Error', 'Deadlift 1RM must be a valid number');
+      return;
+    }
+
     updateProfileMutation.mutate();
   };
 
@@ -150,6 +206,9 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
     setConfirmPassword('');
     setAvatarUri(null);
     setShowPasswordFields(false);
+    setBench1RM(currentData.bench_1rm?.toString() || '');
+    setSquat1RM(currentData.squat_1rm?.toString() || '');
+    setDeadlift1RM(currentData.deadlift_1rm?.toString() || '');
   };
 
   return (
@@ -218,6 +277,50 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
                 placeholderTextColor="#94a3b8"
                 keyboardType="email-address"
                 autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          {/* One Rep Maxes Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>One Rep Maxes</Text>
+            <Text style={styles.sectionDescription}>
+              Update your personal records to track progress accurately
+            </Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Bench Press (lbs)</Text>
+              <TextInput
+                style={styles.input}
+                value={bench1RM}
+                onChangeText={setBench1RM}
+                placeholder="Enter bench press 1RM"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Squat (lbs)</Text>
+              <TextInput
+                style={styles.input}
+                value={squat1RM}
+                onChangeText={setSquat1RM}
+                placeholder="Enter squat 1RM"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Deadlift (lbs)</Text>
+              <TextInput
+                style={styles.input}
+                value={deadlift1RM}
+                onChangeText={setDeadlift1RM}
+                placeholder="Enter deadlift 1RM"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
               />
             </View>
           </View>
@@ -352,8 +455,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '400',
     color: '#1a1a1a',
-    marginBottom: 20,
+    marginBottom: 8,
     letterSpacing: -0.3,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 20,
+    lineHeight: 20,
+    fontWeight: '400',
   },
   changePasswordLink: {
     fontSize: 14,
