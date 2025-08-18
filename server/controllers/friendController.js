@@ -163,10 +163,49 @@ async function listFriends(req, res) {
   return res.json(friends);
 }
 
+async function unfriend(req, res) {
+  const userId = req.user.id;
+  const { id: friendId } = req.params;
+
+  if (!friendId) {
+    return res.status(400).json({ message: "Friend id is required" });
+  }
+
+  // Find accepted friendship row(s) between the two users
+  const { data: rows, error: findErr } = await supabase
+    .from("friend_requests")
+    .select("id")
+    .or(
+      `and(requester_id.eq.${userId},recipient_id.eq.${friendId},status.eq.accepted),and(requester_id.eq.${friendId},recipient_id.eq.${userId},status.eq.accepted)`
+    );
+
+  if (findErr) {
+    return res.status(500).json({ message: findErr.message });
+  }
+
+  if (!rows || rows.length === 0) {
+    return res.status(404).json({ message: "Friendship not found" });
+  }
+
+  const ids = rows.map((r) => r.id);
+
+  const { error: deleteErr } = await supabase
+    .from("friend_requests")
+    .delete()
+    .in("id", ids);
+
+  if (deleteErr) {
+    return res.status(500).json({ message: deleteErr.message });
+  }
+
+  return res.status(200).json({ message: "Unfriended", removed: ids });
+}
+
 module.exports = {
   searchUsers,
   sendRequest,
   listPending,
   respondRequest,
   listFriends,
+  unfriend,
 };

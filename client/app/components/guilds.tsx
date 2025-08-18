@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../context/authContext';
+import { apiFetch } from '../lib/api';
 
 export interface Guild {
   id: string;
@@ -138,7 +139,7 @@ export default function GuildsScreen() {
   } = useQuery<GuildStats>({
     queryKey: ['guildStats'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:8000/guild-stats', {
+      const res = await apiFetch('/guild-stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to fetch guild stats');
@@ -158,11 +159,9 @@ export default function GuildsScreen() {
     queryKey: ['guilds', selectedCategory],
     queryFn: async ({ pageParam }) => {
       const categoryParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
-      const res = await fetch(
-        `http://localhost:8000/guilds/paginated?offset=${pageParam}&limit=10${categoryParam}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await apiFetch(
+        `/guilds/paginated?offset=${pageParam}&limit=10${categoryParam}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.status === 401) {
         await signOut();

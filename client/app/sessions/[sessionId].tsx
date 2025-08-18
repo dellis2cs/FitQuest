@@ -12,6 +12,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { AuthContext } from '../context/authContext'
+import { apiFetch } from '../lib/api'
 
 // match your backend's getSessionDetail response
 interface Movement {
@@ -81,7 +82,7 @@ export default function SessionDetailScreen() {
   const { data, isLoading, error, refetch } = useQuery<Movement[], Error>({
     queryKey: ['sessionDetail', sessionId],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:8000/sessions/${sessionId}`, {
+      const res = await apiFetch(`/sessions/${sessionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.status === 401) {

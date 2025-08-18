@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AuthContext } from './context/authContext'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { apiFetch } from './lib/api'
 
 
 
@@ -55,7 +56,7 @@ export default function AddWorkout() {
         }),
       }
 
-      const res = await fetch('http://localhost:8000/workout', {
+      const res = await apiFetch('/workout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

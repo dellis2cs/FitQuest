@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { AuthContext } from "../context/authContext";
+import { apiFetch } from "../lib/api";
 
 export default function OneRepMaxes() {
   const { token } = useContext(AuthContext);
@@ -28,7 +29,7 @@ export default function OneRepMaxes() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/maxes", {
+      const res = await apiFetch("/maxes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

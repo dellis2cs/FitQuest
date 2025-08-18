@@ -6,6 +6,7 @@ import { AuthContext } from "./context/authContext"
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LoginScreen from "./login"
+import { apiFetch } from "./lib/api";
 import SignupScreen from "./signup"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 type Screen = "login" | "signup"
@@ -19,7 +20,7 @@ export default function App() {
   const handleLogin = async (email: string, password: string) => {
   console.log("Login attempt:", { email, password });
   try {
-    const response = await fetch("http://localhost:8000/login", {
+    const response = await apiFetch("/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // only email & password here
@@ -51,7 +52,7 @@ export default function App() {
     console.log("Signup attempt:", { name, email, password })
     try {
       //Send a signup request to the backend
-      const response = await fetch("http://localhost:8000/signup", {
+      const response = await apiFetch("/signup", {
         method: "POST",
         headers: {"Content-Type": "application/json",},
         body: JSON.stringify({username:name, email, password}),

@@ -11,10 +11,12 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AuthContext } from '../context/authContext'
 import { useRouter } from 'expo-router'
+import { apiFetch } from '../lib/api'
 
 // Types
 interface Friend {
@@ -50,13 +52,13 @@ const Friends = () => {
   const router = useRouter()
   const [view, setView] = useState<'friends' | 'requests'>('friends')
 
-  const BASE = 'http://localhost:8000'
+  
 
   // Fetch accepted friends
   const { data: friends = [], isLoading: loadingFriends } = useQuery<Friend[]>({
     queryKey: ['friends'],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/friends`, {
+      const res = await apiFetch(`/friends`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Failed to fetch friends')
@@ -68,7 +70,7 @@ const Friends = () => {
   const { data: pending = [], isLoading: loadingPending } = useQuery<PendingRequest[]>({
     queryKey: ['pending'],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/friend_requests`, {
+      const res = await apiFetch(`/friend_requests`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Failed to fetch pending requests')
@@ -79,7 +81,7 @@ const Friends = () => {
   // Mutations
   const respondMutation = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: 'accept' | 'reject' }) => {
-      const res = await fetch(`${BASE}/friend_requests/${id}/respond`, {
+      const res = await apiFetch(`/friend_requests/${id}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +99,7 @@ const Friends = () => {
 
   const sendRequest = useMutation({
     mutationFn: async (username: string) => {
-      const res = await fetch(`${BASE}/friend-requests`, {
+      const res = await apiFetch(`/friend-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,6 +112,26 @@ const Friends = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['friends'])
       queryClient.invalidateQueries(['userSearch', searchQuery])
+      Alert.alert('Request sent', 'Your friend request has been sent.')
+    },
+    onError: (err: any) => {
+      Alert.alert('Request failed', err?.message || 'Could not send friend request')
+    },
+  })
+
+  const unfriendMutation = useMutation({
+    mutationFn: async (friendId: string) => {
+      const res = await apiFetch(`/friends/${friendId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Failed to unfriend')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['friends'])
+    },
+    onError: (err: any) => {
+      Alert.alert('Unfriend failed', err?.message || 'Could not remove friend')
     },
   })
 
@@ -130,7 +152,7 @@ const Friends = () => {
     if (!searchQuery.trim()) return
     setIsSearching(true)
     try {
-      const res = await fetch(`${BASE}/search?search=${encodeURIComponent(searchQuery)}`, {
+      const res = await apiFetch(`/search?search=${encodeURIComponent(searchQuery)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Search failed')
@@ -149,8 +171,8 @@ const Friends = () => {
 
   // UI components
   const FriendCard = ({ friend }: { friend: Friend }) => (
-    <TouchableOpacity onPress={() => navigateToProfile(friend.id)}>
-      <View style={styles.friendCard}>
+    <View style={styles.friendCard}>
+      <TouchableOpacity onPress={() => navigateToProfile(friend.id)}>
         <View style={styles.friendInfo}>
           <Image source={{ uri: friend.avatar_url || undefined }} style={styles.avatar} />
           <View style={styles.friendDetails}>
@@ -160,8 +182,25 @@ const Friends = () => {
             </Text>
           </View>
         </View>
+      </TouchableOpacity>
+      <View style={styles.friendActions}>
+        <TouchableOpacity
+          style={styles.unfriendButton}
+          onPress={() =>
+            Alert.alert(
+              'Unfriend',
+              `Remove ${friend.username} from your friends?`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Unfriend', style: 'destructive', onPress: () => unfriendMutation.mutate(friend.id) },
+              ]
+            )
+          }
+        >
+          <Text style={styles.unfriendButtonText}>Unfriend</Text>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   )
 
   const PendingRequestCard = ({ request }: { request: PendingRequest }) => (
@@ -440,6 +479,8 @@ const styles = StyleSheet.create({
   friendStatus: { fontSize: 12, color: '#64748b', fontWeight: '400' },
   messageButton: { backgroundColor: '#f8fafc', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   messageButtonText: { fontSize: 12, color: '#64748b', fontWeight: '500' },
+  unfriendButton: { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  unfriendButtonText: { color: '#dc2626', fontSize: 12, fontWeight: '600' },
 
   // Request Cards
   requestCard: {

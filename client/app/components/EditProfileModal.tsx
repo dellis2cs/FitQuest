@@ -15,6 +15,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../context/authContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../lib/api';
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -70,7 +71,7 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
   // Update 1RM mutation
   const update1RMMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('http://localhost:8000/maxes', {
+      const res = await apiFetch('/maxes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +115,7 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
       }
 
       // Update profile data
-      const res = await fetch('http://localhost:8000/profile/update', {
+      const res = await apiFetch('/profile/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +149,7 @@ export default function EditProfileModal({ visible, onClose, currentData }: Edit
           name: 'avatar.jpg',
         } as any);
 
-        const avatarRes = await fetch('http://localhost:8000/profile/avatar', {
+        const avatarRes = await apiFetch('/profile/avatar', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,

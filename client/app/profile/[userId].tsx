@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { AuthContext } from '../context/authContext';
+import { apiFetch } from '../lib/api';
 
 // Updated Stat interface matches backend response
 interface Stat {
@@ -77,7 +78,7 @@ export default function UserProfileScreen() {
   const { data: userData, isLoading, error } = useQuery<UserData, Error>({
     queryKey: ['userProfile', userId],
     queryFn: async () => {
-      const res = await fetch(`http://localhost:8000/profile/${userId}`, {
+      const res = await apiFetch(`/profile/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -93,7 +94,7 @@ export default function UserProfileScreen() {
   // Friend request mutation
   const sendFriendRequest = useMutation({
     mutationFn: async (username: string) => {
-      const res = await fetch(`http://localhost:8000/friend-requests`, {
+      const res = await apiFetch(`/friend-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

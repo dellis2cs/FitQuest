@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
+import ForgotPasswordModal from "./components/ForgotPasswordModal"
 
 interface LoginScreenProps {
   onNavigateToSignup: () => void
@@ -23,6 +24,7 @@ export default function LoginScreen({ onNavigateToSignup, onLogin }: LoginScreen
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [forgotVisible, setForgotVisible] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -33,12 +35,14 @@ export default function LoginScreen({ onNavigateToSignup, onLogin }: LoginScreen
     setLoading(true)
     try {
       await onLogin(email, password)
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Login failed. Please try again.")
     } finally {
       setLoading(false)
     }
   }
+
+  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,6 +50,7 @@ export default function LoginScreen({ onNavigateToSignup, onLogin }: LoginScreen
         behavior={Platform.OS === "ios" ? "padding" : "height"} 
         style={styles.keyboardView}
       >
+        <ForgotPasswordModal visible={forgotVisible} onClose={() => setForgotVisible(false)} />
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
@@ -103,7 +108,7 @@ export default function LoginScreen({ onNavigateToSignup, onLogin }: LoginScreen
               </View>
             </View>
 
-            <TouchableOpacity style={styles.forgotPassword}>
+            <TouchableOpacity style={styles.forgotPassword} onPress={() => setForgotVisible(true)}>
               <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
             </TouchableOpacity>
 
@@ -117,29 +122,19 @@ export default function LoginScreen({ onNavigateToSignup, onLogin }: LoginScreen
               </Text>
             </TouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            
 
             <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
+              
 
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-apple" size={20} color="#1a1a1a" />
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </TouchableOpacity>
+              
             </View>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Text style={styles.signupLink} onPress={onNavigateToSignup}>
                 Sign up
               </Text>
@@ -308,6 +303,37 @@ const styles = StyleSheet.create({
   },
   signupLink: {
     color: "#1a1a1a",
+    fontWeight: "500",
+  },
+  resetContainer: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  resetTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 12,
+  },
+  resetHint: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 8,
+  },
+  smallButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#111827",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  smallButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
     fontWeight: "500",
   },
 })

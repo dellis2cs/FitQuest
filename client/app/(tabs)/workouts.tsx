@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AuthContext } from '../context/authContext';
+import { apiFetch } from '../lib/api';
 import WorkoutCalendar from '../components/WorkoutCalender';
 
 // match whatever your backend returns
@@ -86,7 +87,7 @@ export default function WorkoutScreen() {
   } = useQuery<StreakData>({
     queryKey: ['workoutStreak'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:8000/workout-streak', {
+      const res = await apiFetch('/workout-streak', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to fetch streak data');
@@ -105,11 +106,9 @@ export default function WorkoutScreen() {
   } = useInfiniteQuery<PaginatedResponse>({
     queryKey: ['workoutSessions'],
     queryFn: async ({ pageParam }) => {
-      const res = await fetch(
-        `http://localhost:8000/sessions/paginated?offset=${pageParam}&limit=15`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await apiFetch(
+        `/sessions/paginated?offset=${pageParam}&limit=15`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.status === 401) {
         await signOut();

@@ -191,23 +191,8 @@ export default function SignupScreen({ onNavigateToLogin, onSignup }: SignupScre
                 </Text>
               </TouchableOpacity>
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.dividerLine} />
-              </View>
+             
 
-              <View style={styles.socialButtons}>
-                <TouchableOpacity style={styles.socialButton}>
-                  <Ionicons name="logo-google" size={20} color="#4285F4" />
-                  <Text style={styles.socialButtonText}>Google</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.socialButton}>
-                  <Ionicons name="logo-apple" size={20} color="#1a1a1a" />
-                  <Text style={styles.socialButtonText}>Apple</Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Footer */}

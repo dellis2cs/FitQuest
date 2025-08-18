@@ -6,6 +6,7 @@ const {
   respondRequest,
   listPending,
   listFriends,
+  unfriend,
 } = require("../controllers/friendController");
 
 router.get("/search", protect, searchUsers);
@@ -13,5 +14,6 @@ router.get("/friends", protect, listFriends);
 router.get("/friend_requests", protect, listPending);
 router.post("/friend-requests", protect, sendRequest);
 router.post("/friend_requests/:id/respond", protect, respondRequest);
+router.delete("/friends/:id", protect, unfriend);
 
 module.exports = router;
